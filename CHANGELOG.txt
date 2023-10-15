@@ -3,6 +3,13 @@
 
 # Change Log (latest first)
 
+2023-10-14    v1.06b    Modified MCForms datecode for 2min resolution instead of 15min
+                        Fixed bug when older versions submit an MCForm with shorter datecode
+                        Fixed issue with detecting /P and other tactical calls
+                        Removed defunct APRSIS sms messaging
+						Added ability to hide rx.activity and rx.directed in main window
+						Added ability to import/add form responses
+						Added APRSIS POTAGW function
 2023-03-24    v1.05b    Fixed bug with spaces in expect allowed list
                         Renamed the "allowed" input in Expect to match the list view name
                         Adjusted frame/grid to help with text cutoff on some systems

@@ -33,6 +33,7 @@ Amateur Operator Information|F!100
 @1 Technician
 @2 General
 @3 Extra
+@4 Advanced
 
 ? Years operating radio:
 @1 0-5 years
