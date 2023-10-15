@@ -1,6 +1,7 @@
 # JS8Spotter MIT License, Joe Lyman KF7MIX
 # You should have received a copy of the source and license with the program
-# Special thanks to KE0DHO, KF0HHR, N0GES, N6CYB, KQ4DRG, KI6ESH, and N4FWD.
+# Special thanks to KE0DHO, KF0HHR, KQ4DRG, N4FWD, and N0GES, for help in
+# development
 
 # Overview
 
@@ -216,7 +217,7 @@ available at kf7mix.com, or program your own gateway to receive forms data.
 
 JS8Call supports APRSIS gateway commands. The APRS options in the Tools menu
 help you format these commands for easy and quick use. Use them for sending
-an SMS text, an email, or reporting your grid location.
+an an email, POTA Gateway, or reporting your grid location.
 
 # Support
 

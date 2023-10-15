@@ -9,7 +9,7 @@ Situation Report|F!300
 @4 Operator is reporting on behalf of own QTH unit leader, from outside QTH region
 @5 Operator is reporting on behalf of regional leader, from QTH
 @6 Operator is reporting on behalf of regional leader, from QTH region
-@7 Operator is reporting on behalf of regional leader, from ouside QTH region
+@7 Operator is reporting on behalf of regional leader, from outside QTH region
 @A Relay, retrieve details with "E? F!300A"
 
 ? How may the managing leader be reached?

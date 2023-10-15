@@ -1,4 +1,5 @@
-# JS8Spotter v1.05b. Special thanks to KE0DHO, KF0HHR, N0GES, N6CYB, KQ4DRG, and N4FWD. Visit https://kf7mix.com/js8spotter.html for information
+# JS8Spotter v1.06b. Visit https://kf7mix.com/js8spotter.html for information
+# Special thanks to KE0DHO, KF0HHR, N0GES, N6CYB, KQ4DRG, NK8O, N0YJ, KI6ESH, N4FWD, and everyone else who has contributed
 #
 # MIT License, Copyright 2023 Joseph D Lyman KF7MIX --- Permission is hereby granted,  free of charge, to any person obtaining a copy of this software and associated documentation files
 # (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
@@ -29,7 +30,7 @@ import requests
 ### Globals
 swname = "JS8Spotter"
 fromtext = "de KF7MIX"
-swversion = "1.05b"
+swversion = "1.06b"
 
 dbfile = 'js8spotter.db'
 conn = sqlite3.connect(dbfile)
@@ -77,7 +78,7 @@ c.execute("SELECT * FROM setting")
 dbsettings = c.fetchall()
 
 ## Rebuild database settings if any are missing
-if len(dbsettings)<13:
+if len(dbsettings)<15:
     svals = "('udp_ip','127.0.0.1'),"
     svals+= "('udp_port','2242'),"
     svals+= "('tcp_ip','127.0.0.1'),"
@@ -90,7 +91,9 @@ if len(dbsettings)<13:
     svals+= "('callsign','FILL'),"
     svals+= "('grid','FILL'),"
     svals+= "('hide_spot','0'),"
-    svals+= "('forms_gateway','')"
+    svals+= "('forms_gateway',''),"
+    svals+= "('hide_activity','0'),"
+    svals+= "('hide_directed','0')"
     c.execute("INSERT INTO setting(name,value) VALUES "+svals)
     conn.commit()
     c.execute("SELECT * FROM setting")
@@ -176,7 +179,10 @@ class TCP_RX(Thread):
                                 event.set()
 
                             ## Multiple Choice Forms (MCF) subsystem. Check for prefix "F!<three digits> <form response> <msg> <datecode>" in any incoming data
-                            scan_forms = re.search("([A-Z0-9]+):\s+?(@?[A-Z0-9]+)\s+?(.*\s+)?(F\![A-Z0-9]{3})\s+?([A-Z0-9]+)\s+?(.*?)(\#[A-Z0-9]+)",msg_value) # from, to, <optional E? or MSG etc. group not used>, form ID, form responses, msg, timestamp
+
+                            # Add \/?\-?[A-Z0-9]? to callsign detection, for /P and other tactical calls
+                            #scan_forms = re.search("([A-Z0-9]+):\s+?(@?[A-Z0-9]+)\s+?(.*\s+)?(F\![A-Z0-9]{3})\s+?([A-Z0-9]+)\s+?(.*?)(\#[A-Z0-9]+)",msg_value) # from, to, <optional E? or MSG etc. group not used>, form ID, form responses, msg, timestamp
+                            scan_forms = re.search("([A-Z0-9]+)\/?\-?[A-Z0-9]?:\s+?(@?[A-Z0-9]+)\/?\-?[A-Z0-9]?\s+?(.*\s+)?(F\![A-Z0-9]{3})\s+?([A-Z0-9]+)\s+?(.*?)(\#[A-Z0-9]+)",msg_value) # from, to, <optional E? or MSG etc. group not used>, form ID, form responses, msg, timestamp
                             if scan_forms:
                                 # forward to gateway if user has one configured
                                 rstat=""
@@ -189,7 +195,8 @@ class TCP_RX(Thread):
                                 conn1.commit()
                                 event.set()
 
-                            scan_formsrelay = re.search("([A-Z0-9]+):\s+?(@?[A-Z0-9>]+)\s+?(.*\s+)?(F\![A-Z0-9]{3})\s+?([A-Z0-9]+)\s+?(.*?)(\#[A-Z0-9]+)\s+?\*DE\*\s+?([A-Z0-9]+)",msg_value)
+                            #scan_formsrelay = re.search("([A-Z0-9]+):\s+?(@?[A-Z0-9>]+)\s+?(.*\s+)?(F\![A-Z0-9]{3})\s+?([A-Z0-9]+)\s+?(.*?)(\#[A-Z0-9]+)\s+?\*DE\*\s+?([A-Z0-9]+)",msg_value)
+                            scan_formsrelay = re.search("([A-Z0-9]+)\/?\-?[A-Z0-9]?:\s+?(@?[A-Z0-9>]+)\/?\-?[A-Z0-9]?\s+?(.*\s+)?(F\![A-Z0-9]{3})\s+?([A-Z0-9]+)\s+?(.*?)(\#[A-Z0-9]+)\s+?\*DE\*\s+?([A-Z0-9]+)\/?\-?[A-Z0-9]?",msg_value)
                             if scan_formsrelay:
                                 # forward to gateway if user has one configured
                                 rstat=""
@@ -209,14 +216,14 @@ class TCP_RX(Thread):
                             ex_relay = ""
 
                             # scan for direct request expect
-                            scan_expect = re.search("([A-Z0-9]+):\s+?(@?[A-Z0-9]+)\s+?E\?\s+?([A-Z0-9!]+)",msg_value) # from, to, expect
+                            scan_expect = re.search("([A-Z0-9]+)\/?\-?[A-Z0-9]?:\s+?(@?[A-Z0-9]+)\/?\-?[A-Z0-9]?\s+?E\?\s+?([A-Z0-9!]+)",msg_value) # from, to, expect
                             if scan_expect:
                                 ex_from = scan_expect.group(1)
                                 ex_to = scan_expect.group(2)
                                 ex_expect = scan_expect.group(3)
                             else:
                                 # scan for relayed request expect
-                                scan_expect = re.search("([A-Z0-9]+):\s+?([A-Z0-9]+)\>?\s+?E\?\s+?([A-Z0-9!]+)\s+?\*DE\*?\s+?([A-Z0-9]+)?",msg_value) # relay, to, expect, from
+                                scan_expect = re.search("([A-Z0-9]+)\/?\-?[A-Z0-9]?:\s+?([A-Z0-9]+)\/?\-?[A-Z0-9]?\>?\s+?E\?\s+?([A-Z0-9!]+)\s+?\*DE\*?\s+?([A-Z0-9]+)\/?\-?[A-Z0-9]?",msg_value) # relay, to, expect, from
                                 if scan_expect:
                                     ex_relay = scan_expect.group(1)
                                     ex_to = scan_expect.group(2)
@@ -360,6 +367,8 @@ class App(tk.Tk):
         self.viewmenu = Menu(self.menubar, tearoff = 0)
         self.viewmenu.add_command(label = "Hide Heartbeats", command = self.toggle_view_hb)
         self.viewmenu.add_command(label = "Hide RX.SPOT", command = self.toggle_view_spot)
+        self.viewmenu.add_command(label = "Hide RX.ACTIVITY", command = self.toggle_view_activity)
+        self.viewmenu.add_command(label = "Hide RX.DIRECTED", command = self.toggle_view_directed)
         self.viewmenu.add_separator()
         self.viewmenu.add_command(label = "Dark Theme", command = self.toggle_theme)
 
@@ -371,9 +380,10 @@ class App(tk.Tk):
         self.toolsmenu.add_cascade(label = 'MCForms - Forms', menu = self.formsmenu)
         self.toolsmenu.add_command(label = 'MCForms - Responses', command = self.form_responses)
         self.toolsmenu.add_separator()
-        self.toolsmenu.add_command(label = 'APRS - SMS Text', command = self.aprs_sms)
+        #self.toolsmenu.add_command(label = 'APRS - SMS Text', command = self.aprs_sms)
         self.toolsmenu.add_command(label = 'APRS - Email', command = self.aprs_email)
         self.toolsmenu.add_command(label = 'APRS - Report Grid', command = self.aprs_grid)
+        self.toolsmenu.add_command(label = 'APRS - POTA Gateway', command = self.aprs_pota)
 
         self.helpmenu = Menu(self.menubar, tearoff = 0)
         self.helpmenu.add_command(label = 'Quick Help', command = self.showhelp)
@@ -444,7 +454,7 @@ class App(tk.Tk):
         # add inputs and buttons below treeviews
         self.kwframe = Frame(self)
         self.kwframe.grid(row=3, column=0, columnspan=2, sticky='NSEW', padx=10, pady=(0,10))
-        self.new_keyword = ttk.Entry(self.kwframe, width = '14')
+        self.new_keyword = ttk.Entry(self.kwframe, width = '12')
         self.new_keyword.grid(row = 0, column = 0)
         self.new_keyword.bind('<Return>', lambda ev: self.proc_addkw())
 
@@ -485,7 +495,7 @@ class App(tk.Tk):
 
     def activate_theme(self):
         if settings['dark_theme'] == "1":
-            self.viewmenu.entryconfigure(3, label="\u2713 Dark Theme")
+            self.viewmenu.entryconfigure(5, label="\u2713 Dark Theme")
             self.call("set_theme", "dark")
             self.keywordmark.configure(fg='#6699FF')
             self.activitymark.configure(fg='#CC66FF')
@@ -496,7 +506,7 @@ class App(tk.Tk):
             self.keywords.tag_configure('oddrow', background='#777')
             self.keywords.tag_configure('evenrow', background='#555')
         else:
-            self.viewmenu.entryconfigure(3, label="Dark Theme")
+            self.viewmenu.entryconfigure(5, label="Dark Theme")
             self.call("set_theme", "light")
             self.keywordmark.configure(fg='#4477FF')
             self.activitymark.configure(fg='#AA44FF')
@@ -632,7 +642,7 @@ class App(tk.Tk):
         conn.commit()
         self.refresh_activity_tree()
 
-    ## Toggle Heartbeat Display in activity pane
+    ## Toggle RX.SPOT Display in activity pane
     def toggle_view_spot(self):
         global settings
         if settings['hide_spot'] == "1":
@@ -643,6 +653,31 @@ class App(tk.Tk):
             settings['hide_spot'] = "1"
         conn.commit()
         self.refresh_activity_tree()
+
+    ## Toggle RX.ACTIVITY Display in activity pane
+    def toggle_view_activity(self):
+        global settings
+        if settings['hide_activity'] == "1":
+            c.execute("UPDATE setting SET value = '0' WHERE name = 'hide_activity'")
+            settings['hide_activity'] = "0"
+        else:
+            c.execute("UPDATE setting SET value = '1' WHERE name = 'hide_activity'")
+            settings['hide_activity'] = "1"
+        conn.commit()
+        self.refresh_activity_tree()
+
+    ## Toggle RX.DIRECTED Display in activity pane
+    def toggle_view_directed(self):
+        global settings
+        if settings['hide_directed'] == "1":
+            c.execute("UPDATE setting SET value = '0' WHERE name = 'hide_directed'")
+            settings['hide_directed'] = "0"
+        else:
+            c.execute("UPDATE setting SET value = '1' WHERE name = 'hide_directed'")
+            settings['hide_directed'] = "1"
+        conn.commit()
+        self.refresh_activity_tree()
+
 
     ## Toggle background scan setting for current profile
     def toggle_bg_scan(self):
@@ -711,6 +746,9 @@ class App(tk.Tk):
         wheres=""
         self.viewmenu.entryconfigure(0, label="Hide Heartbeats")
         self.viewmenu.entryconfigure(1, label="Hide RX.SPOT")
+        self.viewmenu.entryconfigure(2, label="Hide RX.ACTIVITY")
+        self.viewmenu.entryconfigure(3, label="Hide RX.DIRECTED")
+
         self.activitymark.config(text = "Matched Activity (last 100)")
 
         if settings['hide_heartbeat']=="1":
@@ -722,6 +760,16 @@ class App(tk.Tk):
             wheres += " AND type NOT LIKE '%RX.SPOT%' "
             self.activitymark.config(text = "Matched Activity (last 100*)")
             self.viewmenu.entryconfigure(1, label="\u2713 Hide RX.SPOT")
+
+        if settings['hide_activity']=="1":
+            wheres += " AND type NOT LIKE '%RX.ACTIVITY%' "
+            self.activitymark.config(text = "Matched Activity (last 100*)")
+            self.viewmenu.entryconfigure(2, label="\u2713 Hide RX.ACTIVITY")
+
+        if settings['hide_directed']=="1":
+            wheres += " AND type NOT LIKE '%RX.DIRECTED%' "
+            self.activitymark.config(text = "Matched Activity (last 100*)")
+            self.viewmenu.entryconfigure(3, label="\u2713 Hide RX.DIRECTED")
 
         c.execute("SELECT * FROM activity WHERE profile_id = '"+str(current_profile_id)+"' "+wheres+" ORDER BY spotdate DESC LIMIT 100")
         activity_records = c.fetchall()
@@ -1859,17 +1907,20 @@ class App(tk.Tk):
         self.frframe = ttk.Frame(self.top)
         self.frframe.grid(row=2, column=0, sticky='NSEW')
 
-        self.frexport = ttk.Button(self.frframe, text = 'Export All', command = self.export_formresps, width='12')
+        self.frexport = ttk.Button(self.frframe, text = 'Import', command = self.import_formresps, width='9')
         self.frexport.grid(row=0, column=0, sticky='NE', padx=(8,8),pady=(8,8))
 
+        self.frexport = ttk.Button(self.frframe, text = 'Export All', command = self.export_formresps, width='12')
+        self.frexport.grid(row=0, column=1, sticky='NE', padx=(8,8),pady=(8,8))
+
         self.gwlabel = Label(self.frframe, text='Gateway:')
-        self.gwlabel.grid(row=0, column = 1, sticky='NE', padx=(30,0), pady=(12,8))
+        self.gwlabel.grid(row=0, column = 2, sticky='NE', padx=(30,0), pady=(12,8))
         self.gateway = ttk.Entry(self.frframe, width = '44')
-        self.gateway.grid(row = 0, column = 2, sticky='NE', padx=(8,8), pady=(8,8))
+        self.gateway.grid(row = 0, column = 3, sticky='NE', padx=(8,8), pady=(8,8))
         self.gateway.insert(0, settings['forms_gateway'])
         self.gateway.bind('<Return>', lambda ev: self.form_savegw())
         self.gwsave = ttk.Button(self.frframe, text = 'Save', command = self.form_savegw, width='12')
-        self.gwsave.grid(row=0, column=3, sticky='NE', padx=(8,8),pady=(8,8))
+        self.gwsave.grid(row=0, column=4, sticky='NE', padx=(8,8),pady=(8,8))
 
         self.update_formtypecombo()
         self.ftcombo.set("View All Form Types")
@@ -2045,6 +2096,49 @@ class App(tk.Tk):
                 c.execute("DELETE FROM forms WHERE id = ?", [friid])
             conn.commit()
             self.update_formresponses()
+
+    ## Add form responses to the database manually
+    def import_formresps(self):
+        self.top2 = Toplevel(self)
+        self.top2.title("Add Form Responses")
+        self.top2.geometry('400x500')
+        self.top2.minsize(400,500)
+
+        self.addmark = ttk.Label(self.top2, text="Type or paste (ctrl+v) form responses, one per line")
+        self.addmark.pack(side=TOP, anchor='nw', padx=10, pady=10)
+
+        # save button
+        tlframe = ttk.Frame(self.top2)
+        tlframe.pack(side=BOTTOM, anchor='sw', padx=10, pady=(0,10))
+        self.save_button = ttk.Button(tlframe, text = 'Add Responses', command = self.proc_importformresps)
+        self.save_button.pack(side=LEFT, padx=(0,10))
+
+        # text window
+        self.batch = Text(self.top2, wrap=NONE)
+        batch_scrollbar = ttk.Scrollbar(self.top2, orient=tk.VERTICAL, command=self.batch.yview)
+        self.batch.configure(yscroll=batch_scrollbar.set)
+        batch_scrollbar.pack(side=RIGHT, fill='y', padx=(0,10), pady=(0,10))
+        self.batch.pack(side=LEFT, expand=True, fill='both', padx=(10,0), pady=(0,10))
+
+        self.top2.focus()
+        self.top2.wait_visibility()
+        self.top2.grab_set()
+        self.top2.bind('<Escape>', lambda x: self.top2.destroy())
+
+    ## Process added form responses
+    def proc_importformresps(self):
+        batch_values = StringIO(self.batch.get('1.0','end'))
+        for line in batch_values:
+
+            # format is FROM<space>TO<space>FORM#<space>RESPS<space>MSG<space>TIMESIG
+            match_forms = re.search("([A-Z0-9]+)\s+([A-Z0-9]+)\s+(F![A-Z0-9]{3})\s+([A-Z0-9]+)\s+([A-Z0-9 ]+)?\s+(\#[A-Z]+)",line)
+            if match_forms:
+                sql = "INSERT INTO forms(fromcall,tocall,typeid,responses,msgtxt,timesig,lm,gwtx) VALUES (?,?,?,?,?,?, CURRENT_TIMESTAMP,'')"
+                c.execute(sql, [match_forms[1],match_forms[2],match_forms[3],match_forms[4],match_forms[5],match_forms[6]])
+                conn.commit()
+
+        self.top2.destroy()
+        self.update_formresponses()
 
     def export_formresps(self):
         # limit to selected form type
@@ -2416,6 +2510,69 @@ class App(tk.Tk):
         self.sms_cmd.delete(0,END)
         self.sms_cmd.insert(0,aprs_cmd)
 
+
+    ## Send APRS POTAGW data
+    def aprs_pota(self):
+        self.top = Toplevel(self)
+        self.top.title("APRS: POTA Gateway")
+        self.top.resizable(width=False, height=False)
+
+        # Input PARK,Frequency(KHz),Mode,Comments
+        label_new = ttk.Label(self.top, text = "Park")
+        label_new.grid(row = 0, column = 0, padx=(10,0), pady=(20,0))
+        self.pota_park = ttk.Entry(self.top, width='34')
+        self.pota_park.grid(row = 0, column = 1, padx=(0,10), pady=(20,0))
+        self.pota_park.bind("<KeyRelease>", lambda x: self.update_aprspota())
+
+        label_new = ttk.Label(self.top, text = "Freq (KHz)")
+        label_new.grid(row = 1, column = 0, padx=(10,0), pady=(10,0))
+        self.pota_freq = ttk.Entry(self.top, width='34')
+        self.pota_freq.grid(row = 1, column = 1, padx=(0,10), pady=(10,0))
+        self.pota_freq.bind("<KeyRelease>", lambda x: self.update_aprspota())
+
+        label_new = ttk.Label(self.top, text = "Mode")
+        label_new.grid(row = 2, column = 0, padx=(10,0), pady=(10,0))
+        self.pota_mode = ttk.Entry(self.top, width='34')
+        self.pota_mode.grid(row = 2, column = 1, padx=(0,10), pady=(10,0))
+        self.pota_mode.bind("<KeyRelease>", lambda x: self.update_aprspota())
+
+        label_new = ttk.Label(self.top, text = "Comments")
+        label_new.grid(row = 3, column = 0, padx=(10,0), pady=(10,0))
+        self.pota_comm = ttk.Entry(self.top, width='34')
+        self.pota_comm.grid(row = 3, column = 1, padx=(0,10), pady=(10,0))
+        self.pota_comm.bind("<KeyRelease>", lambda x: self.update_aprspota())
+
+        self.sms_cmd = ttk.Entry(self.top)
+        self.sms_cmd.grid(row = 4, column = 0, columnspan=2, stick='NSEW', padx=(10,10), pady=(20,0))
+
+        cbframe = ttk.Frame(self.top)
+        cbframe.grid(row=5, columnspan=2, sticky='e', padx=10)
+
+        create_button = ttk.Button(cbframe, text = "Send", command = self.proc_aprscmd)
+        create_button.grid(row=0, column = 1, padx=(10,0), pady=(20,20))
+        cancel_button = ttk.Button(cbframe, text = "Cancel", command = self.top.destroy)
+        cancel_button.grid(row=0, column = 2, padx=(10,0), pady=(20,20))
+
+        self.top.wait_visibility()
+        self.top.grab_set()
+        self.pota_park.focus()
+        self.top.bind('<Escape>', lambda x: self.top.destroy())
+
+    ## Update generated aprs cmd string on keypress
+    def update_aprspota(self):
+        park = self.pota_park.get().strip()
+        freq = self.pota_freq.get().strip()
+        mode = self.pota_mode.get().strip()
+        comm = self.pota_comm.get().strip()
+        if park=="" or freq=="" or mode=="":
+            self.sms_cmd.delete(0,END)
+            return
+        aprs_cmd = "@APRSIS CMD :POTAGW   :"+settings['callsign']+" "+park+" "+freq+" "+mode+" "+comm
+        self.sms_cmd.delete(0,END)
+        self.sms_cmd.insert(0,aprs_cmd)
+
+
+
     ## Process (send/tx) APRS cmd
     def proc_aprscmd(self):
         new_cmd = self.sms_cmd.get()
@@ -2567,10 +2724,13 @@ class App(tk.Tk):
         h=""
         if ha>64 and ha<88: h = str(ha-64)
 
-        ma = ord(ststamp[4]) # Minutes, 2min resolution, A-Z and 0-3 (A=0, B=2, C=4, etc)
         t=""
-        if ma>47 and ma<52: t = h+":"+str(((ma-48)+26)*2).zfill(2)
-        if ma>64 and ma<91: t = h+":"+str((ma-65)*2).zfill(2)
+        if len(ststamp) == 5: # previous version had only three (plus #) characters, so we'll have this be optional
+            ma = ord(ststamp[4]) # Minutes, 2min resolution, A-Z and 0-3 (A=0, B=2, C=4, etc)
+            if ma>47 and ma<52: t = h+":"+str(((ma-48)+26)*2).zfill(2)
+            if ma>64 and ma<91: t = h+":"+str((ma-65)*2).zfill(2)
+        else:
+            t = h+":00"
 
         if m != "" and d != "" and h !="" and t != "":
             dcst = str(m+"/"+d+" "+t)
@@ -2639,6 +2799,8 @@ def main():
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.connect((settings['tcp_ip'], int(settings['tcp_port'])))
     except ConnectionRefusedError:
+        sock = None # we'll provide the connection error after the gui loads
+    except TimeoutError:
         sock = None # we'll provide the connection error after the gui loads
 
     app = App(sock)
