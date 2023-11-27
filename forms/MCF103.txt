@@ -1,15 +1,21 @@
 Net Checkin|F!103
 
-# Form updated 03/07/2023. This is a default JS8Spotter MCForms form. See kf7mix.com for details.
+# Form updated 10/20/2023. This is a default JS8Spotter MCForms form. See kf7mix.com for details.
+
+! IMPORTANT INFO
+!! Needs & Status
+. These first two questions are the most important part of your net report.
+. They will help Net Control to determine if you need additional time on the net, or attention from net participants.
 
 ? Do you have any traffic?
 @Y Yes
-@N No
+@N *No
 
 ? What is your status?
-@1 All operations normal
+@1 *All operations normal
 @5 Situation report, retrieve form F!301 for details
 
+!!! Local Conditions
 ? What is the current forecast weather for today at your QTH?
 @1 Sunny
 @2 Partly Cloudy
@@ -31,3 +37,5 @@ Net Checkin|F!103
 @6 85F - 95F
 @7 Above 95F
 
+! Test End
+. testing at the end, no question associated

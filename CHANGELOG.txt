@@ -2,7 +2,16 @@
 # You should have received a copy of the source and license with this application
 
 # Change Log (latest first)
-
+2023-10-24    v1.07b    Made 99=inifite in allowed expect responses
+                        Added ability to clear Sent To list in Expect
+                        Added ability to set default form response with * at start of answer text (as in "@Y *Yes")
+                        Fixed failure when form timestamp is incomplete
+                        Fixed timestamp encoding oversight
+                        Fixed bug crash with incorrect gateway URL
+                        Changed form response view to add decoded timestamps
+                        Added ability to include instructional text and headings (levels 1,2,3) in forms
+                        Added ability to view form responses in GUI similar to fill-out mode (select a response row and right-click)
+                        Fixed visualize waterfall display, math was off
 2023-10-14    v1.06b    Modified MCForms datecode for 2min resolution instead of 15min
                         Fixed bug when older versions submit an MCForm with shorter datecode
                         Fixed issue with detecting /P and other tactical calls

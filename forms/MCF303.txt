@@ -1,6 +1,6 @@
 Hospital Status Report|F!303
 
-# Form updated 02/24/2023. This is a default JS8Spotter MCForms form. See kf7mix.com for details.
+# Form updated 10/21/2023. This is a default JS8Spotter MCForms form. See kf7mix.com for details.
 
 ? Reporting for which hospital?
 @1 Closest to operator QTH
@@ -12,13 +12,13 @@ Hospital Status Report|F!303
 @3 Limited partially functional- Some assistance needed
 @4 Impaired - major assistance needed
 @5 Not functional - major assistance needed
-@6 Status unknown
+@U Status unknown
 
 ? Hospital COMMUNICATION: Internet?
 @1 Yes
 @2 No
 @3 Partial or intermittent
-@4 Unknown
+@U Unknown
 
 ? Hospital COMMUNICATION: Landline Phone and/or Cell/Text?
 @1 Yes, landline and cell/text
@@ -28,7 +28,7 @@ Hospital Status Report|F!303
 @5 Partial or intermittent landline, no cell
 @6 Partial or intermittent cell/text service, no landline
 @7 Partial or intermittent landline, cell and text
-@8 Unknown
+@U Unknown
 
 ? Hospital COMMUNICATION: Amateur Radio and/or Satellite Phone?
 @1 Yes, amateur radio and satellite phone
@@ -37,27 +37,27 @@ Hospital Status Report|F!303
 @4 Partial or intermittent amateur radio and satellite phone
 @5 Partial or intermittent amateur radio, no satellite phone
 @6 Partial or intermittent satellite phone, no amateur radio
-@7 Unknown
+@U Unknown
 
 ? Hospital UTILITIES: Power?
 @1 Yes full, municipal source
 @2 Yes full, generators
 @3 Partial power, generators
-@2 No power
-@3 Unknown
+@N No power
+@U Unknown
 
 ? Hospital UTILITIES: Water?
 @1 Yes full, municipal source
 @2 Yes full, reserves
 @3 Partial water, reserves
-@2 No water
-@3 Unknown
+@N No water
+@U Unknown
 
 ? Hospital UTILITIES: HVAC?
 @1 Fully operational
 @2 Patial operation
-@2 None
-@3 Unknown
+@N None
+@U Unknown
 
 ? Evacuations (select highest accurate level)?
 @1 None currently planned
@@ -68,7 +68,7 @@ Hospital Status Report|F!303
 @6 Full evacuation in process
 @7 Full evacuation completed
 @8 Sheltering in place
-@9 Unknown
+@U Unknown
 
 ? Casualties and/or injuries?
 @1 No injuries, no deaths

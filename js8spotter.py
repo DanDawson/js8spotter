@@ -1,5 +1,5 @@
-# JS8Spotter v1.06b. Visit https://kf7mix.com/js8spotter.html for information
-# Special thanks to KE0DHO, KF0HHR, N0GES, N6CYB, KQ4DRG, NK8O, N0YJ, KI6ESH, N4FWD, and everyone else who has contributed
+# JS8Spotter v1.07b. Visit https://kf7mix.com/js8spotter.html for information
+# Special thanks to KE0DHO, KF0HHR, N0GES, N6CYB, KQ4DRG, NK8O, N0YJ, KI6ESH, N4FWD, KQ4HQD, and everyone else who has contributed
 #
 # MIT License, Copyright 2023 Joseph D Lyman KF7MIX --- Permission is hereby granted,  free of charge, to any person obtaining a copy of this software and associated documentation files
 # (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
@@ -30,7 +30,7 @@ import requests
 ### Globals
 swname = "JS8Spotter"
 fromtext = "de KF7MIX"
-swversion = "1.06b"
+swversion = "1.07b"
 
 dbfile = 'js8spotter.db'
 conn = sqlite3.connect(dbfile)
@@ -188,7 +188,11 @@ class TCP_RX(Thread):
                                 rstat=""
                                 if settings['forms_gateway']!='':
                                     formobj = {'fromcall':scan_forms[1], 'tocall':scan_forms[2], 'typeid':scan_forms[4], 'responses':scan_forms[5], 'msgtxt':scan_forms[6], 'timesig':scan_forms[7]}
-                                    rstat = requests.post(settings['forms_gateway'], data = formobj)
+                                    try:
+                                        rstat = requests.post(settings['forms_gateway'], data = formobj)
+                                    except requests.exceptions.RequestException as e:
+                                        rstat = ""
+
                                 # found a form in the stream, save it. No need for it to be directed to us, we want to save all forms we find.
                                 sql = "INSERT INTO forms(fromcall,tocall,typeid,responses,msgtxt,timesig,lm,gwtx) VALUES (?,?,?,?,?,?, CURRENT_TIMESTAMP,?)"
                                 c1.execute(sql, [scan_forms[1],scan_forms[2],scan_forms[4],scan_forms[5],scan_forms[6],scan_forms[7],str(rstat)])
@@ -202,7 +206,11 @@ class TCP_RX(Thread):
                                 rstat=""
                                 if settings['forms_gateway']!='':
                                     formobj = {'fromcall':scan_formsrelay[8], 'tocall':scan_formsrelay[2], 'typeid':scan_formsrelay[4], 'responses':scan_formsrelay[5], 'msgtxt':scan_formsrelay[6], 'timesig':scan_formsrelay[7]}
-                                    rstat = requests.post(settings['forms_gateway'], data = formobj)
+                                    try:
+                                        rstat = requests.post(settings['forms_gateway'], data = formobj)
+                                    except requests.exceptions.RequestException as e:
+                                        rstat = ""
+
                                 # found a relayed form, save it. Doesn't matter who it is to/from, we want to save all forms we find.
                                 sql = "INSERT INTO forms(fromcall,tocall,typeid,responses,msgtxt,timesig,lm,gwtx) VALUES (?,?,?,?,?,?, CURRENT_TIMESTAMP,?)"
                                 c1.execute(sql, [scan_formsrelay[8],scan_formsrelay[2],scan_formsrelay[4],scan_formsrelay[5],scan_formsrelay[6],scan_formsrelay[7],str(rstat)])
@@ -246,9 +254,9 @@ class TCP_RX(Thread):
                                         if allowall=="*" and ex_to==settings['callsign'] and reply_to=="": reply_to = ex_from
 
                                     if reply_to:
-                                        # make sure that txmax hasn't been exceeded
+                                        # make sure that txmax hasn't been exceeded (99=inf)
                                         reply_count=len(ex_exists[3].split(","))-1
-                                        if reply_count<int(ex_exists[4]):
+                                        if reply_count<int(ex_exists[4]) or int(ex_exists[4])==99:
                                             # formulate reply, relay or regular
                                             if ex_relay:
                                                 ex_reply = settings['callsign']+": "+ex_relay+"> "+reply_to+" "+ex_exists[1]
@@ -1533,8 +1541,10 @@ class App(tk.Tk):
 
             for record in wf_records:
                 # calculate location on wf and size
-                sx=int(record[4])-500
-                sx=sx*.44 # scale to match png
+                # * png is 1137px to display 2500hz, so signals adjust to 45.4%
+                # * signal display starts at 500hz, so that must be subtracted (adjusted to 45.4%)
+                sx=int(record[4])*.454 - (500*.454)
+
                 if record[5]=="0": # normal mode
                     w=22
                     h=42
@@ -1659,7 +1669,12 @@ class App(tk.Tk):
         count = 0
         for record in expect_lines:
             reply_count=len(record[3].split(","))-1
-            reply_max = str(reply_count)+"/"+str(record[4])
+            max_replies = record[4]
+            if max_replies==99:
+                has_replies = "\u221e"
+            else:
+                has_replies = str(max_replies)
+            reply_max = str(reply_count)+"/"+has_replies
             ex_date = record[5].split(" ")[0]
 
             if count % 2 == 1:
@@ -1677,6 +1692,7 @@ class App(tk.Tk):
             self.expect.tag_configure('oddrow', background='#EEE')
             self.expect.tag_configure('evenrow', background='#FFF')
 
+    ## Show details about an expect entry
     def show_expect(self, ev):
         if not self.expect.focus(): return
         exiid = self.expect.focus()
@@ -1691,6 +1707,13 @@ class App(tk.Tk):
 
             # display window
             self.expect_text = Text(self.top2, wrap=NONE)
+
+            # clear button
+            tlframe = ttk.Frame(self.top2)
+            tlframe.pack(side=BOTTOM, anchor='sw', padx=10, pady=(0,10))
+            self.top2.clear_button = ttk.Button(tlframe, text = 'Clear', command = self.clear_expect_reqs)
+            self.top2.clear_button.pack(side=LEFT, padx=(0,10))
+
             exp_scrollbar = ttk.Scrollbar(self.top2, orient=tk.VERTICAL, command=self.expect_text.yview)
             self.expect_text.configure(yscroll=exp_scrollbar.set)
             exp_scrollbar.pack(side=RIGHT, fill='y', padx=(0,10), pady=(10,10))
@@ -1707,6 +1730,17 @@ class App(tk.Tk):
             self.top2.wait_visibility()
             self.top2.grab_set()
             self.top2.bind('<Escape>', lambda x: self.top2.destroy())
+
+    ## Clear the sent to list for expect entry
+    def clear_expect_reqs(self):
+        exiid = self.expect.focus()
+        msgtxt = "Are you sure you want to Sent To list for this entry? This action cannot be undone."
+        answer = askyesno(title='Clear Sent To?', message=msgtxt)
+        if answer:
+            c.execute("UPDATE expect SET txlist='' WHERE expect = ?", [exiid])
+            conn.commit()
+            self.top2.destroy()
+            self.update_expect()
 
     def save_expect(self):
         new_expect = re.sub(r'[^A-Z0-9!]','',self.entry_expect.get().upper())
@@ -1880,9 +1914,9 @@ class App(tk.Tk):
         self.formresp.column("fromcall", width=60, minwidth=60, stretch=0)
         self.formresp.column("tocall", width=60, minwidth=60)
         self.formresp.column("typeid", width=60, minwidth=60)
-        self.formresp.column("response", width=270, minwidth=270)
-        self.formresp.column("msgtxt", width=270, minwidth=270)
-        self.formresp.column("timesig", width=75, minwidth=75)
+        self.formresp.column("response", width=260, minwidth=260)
+        self.formresp.column("msgtxt", width=260, minwidth=260)
+        self.formresp.column("timesig", width=95, minwidth=95)
         self.formresp.column("gw", width=40, minwidth=40)
         self.formresp.column("lm", width=120, minwidth=120, stretch=0)
 
@@ -1896,6 +1930,8 @@ class App(tk.Tk):
         self.formresp.heading("lm", text="Received")
 
         self.formresp.bind('<Double-1>', self.show_formresp)
+        self.formresp.bind('<Button-3>', lambda ev: self.form_view(0,ev))
+
         self.formresp.bind('<Delete>', self.delete_formresp)
         self.formresp.grid(row=1, column=0, sticky='NSEW', padx=(10,0), pady=(10,10))
 
@@ -1919,8 +1955,11 @@ class App(tk.Tk):
         self.gateway.grid(row = 0, column = 3, sticky='NE', padx=(8,8), pady=(8,8))
         self.gateway.insert(0, settings['forms_gateway'])
         self.gateway.bind('<Return>', lambda ev: self.form_savegw())
-        self.gwsave = ttk.Button(self.frframe, text = 'Save', command = self.form_savegw, width='12')
-        self.gwsave.grid(row=0, column=4, sticky='NE', padx=(8,8),pady=(8,8))
+        self.gwsave = ttk.Button(self.frframe, text = 'Save GW', command = self.form_savegw, width='10')
+        self.gwsave.grid(row=0, column=4, sticky='NE', padx=(2,8),pady=(8,8))
+
+        self.fwresp = ttk.Button(self.frframe, text = 'Forward', command = self.form_fwresp, width='10')
+        self.fwresp.grid(row=0, column=5, sticky='NE', padx=(32,8),pady=(8,8))
 
         self.update_formtypecombo()
         self.ftcombo.set("View All Form Types")
@@ -1940,6 +1979,72 @@ class App(tk.Tk):
         c.execute("UPDATE setting SET value = '"+settings['forms_gateway']+"' WHERE name = 'forms_gateway'")
         conn.commit()
         messagebox.showinfo("Forms Gateway","Forms gateway saved. If you entered a valid URL, any new forms stored will also be sent to this URL. Save the Gateway box empty to disable.", parent=self.top)
+
+    ## Forward a form response to another station/group
+    def form_fwresp(self):
+        if not self.formresp.focus():
+            messagebox.showinfo("Nothing to Forward","Please select a row to forward.", parent=self.top)
+            return
+        friid = self.formresp.focus()
+
+        if friid == "": return
+
+        c.execute("SELECT * FROM forms WHERE id = '"+friid+"'")
+        formresp_db = c.fetchone()
+
+        if formresp_db:
+
+            self.new_reply = formresp_db[3]+" "+formresp_db[4]+" "+formresp_db[5]+" "+formresp_db[6]+" "+" *DE* "+formresp_db[1]
+
+            self.top2 = Toplevel(self)
+            self.top2.title("Forward Form Response")
+            self.top2.resizable(width=False, height=False)
+
+            label_new = ttk.Label(self.top2, text = "Forward to (single callsign or group)")
+            label_new.grid(row = 0, column = 0, padx=(10,0), pady=(20,0))
+            self.sendto = ttk.Entry(self.top2, width='34')
+            self.sendto.grid(row = 0, column = 1, padx=(0,10), pady=(20,0))
+            self.sendto.bind("<KeyRelease>", lambda x: self.fwresp_updatecmd())
+
+            self.msgcheck = ttk.Checkbutton(self.top2, text='Send as MSG', onvalue=1, offvalue=0, command=self.fwresp_updatecmd)
+            self.msgcheck.grid(row=1, column=0, sticky='W', pady=(8,0))
+            self.msgcheck.state(['!alternate','!selected'])
+
+            self.tx_cmd = ttk.Entry(self.top2)
+            self.tx_cmd.grid(row = 2, column = 0, columnspan=2, stick='NSEW', padx=(10,10), pady=(20,0))
+
+            cbframe = ttk.Frame(self.top2)
+            cbframe.grid(row=3, columnspan=2, sticky='e', padx=10)
+
+            create_button = ttk.Button(cbframe, text = "Send", command = self.proc_fwresp)
+            create_button.grid(row=0, column = 1, padx=(10,0), pady=(20,20))
+            cancel_button = ttk.Button(cbframe, text = "Cancel", command = self.top2.destroy)
+            cancel_button.grid(row=0, column = 2, padx=(10,0), pady=(20,20))
+
+            self.txexpect_updatecmd()
+            self.top2.wait_visibility()
+            self.top2.grab_set()
+            self.sendto.focus()
+            self.top2.bind('<Escape>', lambda x: self.top2.destroy())
+
+    def fwresp_updatecmd(self):
+        to = self.sendto.get().strip().upper() + ">"
+        msg = self.new_reply.strip()
+
+        msgadd=""
+        if self.msgcheck.instate(['selected']):
+            msgadd="MSG "
+
+        tx_cmd = to+" "+msgadd+msg
+        self.tx_cmd.delete(0,END)
+        self.tx_cmd.insert(0,tx_cmd)
+
+    def proc_fwresp(self):
+        new_cmd = self.tx_cmd.get()
+        if new_cmd == "": return
+        tx_content = json.dumps({"params":{},"type":"TX.SEND_MESSAGE","value":new_cmd})
+        self.sock.send(bytes(tx_content + '\n','utf-8'))
+        self.top2.destroy()
 
     ## Update form responses treeview
     def update_formresponses(self):
@@ -1977,9 +2082,9 @@ class App(tk.Tk):
             if record[8]=="": fr_gwtx=""
 
             if count % 2 == 1:
-                self.formresp.insert('', tk.END, iid=record[0], values=(record[1],record[2],record[3],record[4],record[5],record[6],fr_gwtx,fr_date), tags=('oddrow'))
+                self.formresp.insert('', tk.END, iid=record[0], values=(record[1],record[2],record[3],record[4],record[5],self.decode_shorttime(record[6]),fr_gwtx,fr_date), tags=('oddrow'))
             else:
-                self.formresp.insert('', tk.END, iid=record[0], values=(record[1],record[2],record[3],record[4],record[5],record[6],fr_gwtx,fr_date), tags=('evenrow'))
+                self.formresp.insert('', tk.END, iid=record[0], values=(record[1],record[2],record[3],record[4],record[5],self.decode_shorttime(record[6]),fr_gwtx,fr_date), tags=('evenrow'))
             count+=1
 
         if settings['dark_theme'] == "1":
@@ -2030,7 +2135,7 @@ class App(tk.Tk):
         formresp_db = c.fetchone()
 
         if formresp_db:
-            formdata = self.form_items(formresp_db[3])
+            formdata, formtext = self.form_items(formresp_db[3])
             dcst = self.decode_shorttime(formresp_db[6])
 
             self.top2 = Toplevel(self)
@@ -2066,6 +2171,7 @@ class App(tk.Tk):
             qnum=0
             for resp in formresp_db[4]:
                 qnum+=1
+
                 fr_contents += str(formdata[qnum][0].get("question"))
                 qans = [i[str(resp)] for i in formdata[qnum] if str(resp) in i]
                 if qans:
@@ -2206,28 +2312,54 @@ class App(tk.Tk):
         else:
             messagebox.showinfo("No Form Responses","Couldn't find any form responses to export.", parent=self.top)
 
-    ## View a dynamically generated form to fill in
-    def form_view(self, formid):
+    ## View a dynamically generated GUI form to fill in (or, view a response in GUI mode)
+    def form_view(self, formid, friid):
         global forms
 
-        self.top = Toplevel(self)
-        self.top.title("MCForms - Form "+str(formid)+" | "+forms[formid][0])
-        self.top.geometry('1024x600')
-        self.top.minsize(600,500)
-        self.top.resizable(width=True, height=True)
+        if type(friid) is not int:
+            if not self.formresp.focus(): return
+            friid = self.formresp.focus()
 
-        self.top.columnconfigure(0,weight=12)
+            if friid == "": return
 
-        self.top.rowconfigure(0,weight=1)
-        self.top.rowconfigure(1,weight=12)
-        self.top.rowconfigure(2,weight=1)
-        self.top.rowconfigure(3,weight=1)
+            c.execute("SELECT * FROM forms WHERE id = '"+friid+"'")
+            formresp_db = c.fetchone()
 
-        formtitle = ttk.Label(self.top, text = str(formid)+" -- "+forms[formid][0], font=("Segoe Ui Bold", 14))
+            if formresp_db:
+                formid = formresp_db[3]
+                dcst = self.decode_shorttime(formresp_db[6])
+                fr_contents = "FROM Station: "+formresp_db[1]+"        TO Station: "+formresp_db[2]+"\nFiled: "+dcst+"        Received: "+formresp_db[7]+"\nComment: "+formresp_db[5]
+
+        self.top3 = Toplevel(self)
+        self.top3.title("MCForms - Form "+str(formid)+" | "+forms[formid][0])
+        self.top3.geometry('1024x600')
+        self.top3.minsize(600,500)
+        self.top3.resizable(width=True, height=True)
+
+        self.top3.columnconfigure(0,weight=12)
+
+        formtitle = ttk.Label(self.top3, text = str(formid)+" -- "+forms[formid][0], font=("Segoe Ui Bold", 14))
         formtitle.grid(row=0, column = 0, sticky='W', padx=0, pady=(8,0))
 
-        frame=ttk.Frame(self.top)
-        frame.grid(row=1, column=0, sticky='NEWS', padx=0, pady=0)
+        if type(friid) is str:
+            self.top3.rowconfigure(0,weight=1)
+            self.top3.rowconfigure(1,weight=1)
+            self.top3.rowconfigure(2,weight=12)
+            self.top3.rowconfigure(3,weight=1)
+            self.top3.rowconfigure(4,weight=1)
+
+            formsummary = Label(self.top3, text = fr_contents, wraplength=600, justify=LEFT)
+            formsummary.grid(row = 1, column = 0, sticky='W', padx=0, pady=0)
+            frame=ttk.Frame(self.top3)
+            frame.grid(row=2, column=0, sticky='NEWS', padx=0, pady=0)
+        else:
+            self.top3.rowconfigure(0,weight=1)
+            self.top3.rowconfigure(1,weight=12)
+            self.top3.rowconfigure(2,weight=1)
+            self.top3.rowconfigure(3,weight=1)
+
+            frame=ttk.Frame(self.top3)
+            frame.grid(row=1, column=0, sticky='NEWS', padx=0, pady=0)
 
         formcanvas=Canvas(frame, width=300, height=300, scrollregion=(0,0,1900,1900), bd=0, highlightthickness=0, relief='ridge')
 
@@ -2243,46 +2375,85 @@ class App(tk.Tk):
         formframe.grid(row=0, column=0, padx=10, pady=10)
         formcanvas.create_window((0, 0), window=formframe, anchor='nw')
 
-        formdata = self.form_items(formid)
+        formdata, formtext = self.form_items(formid)
         formlabels = {}
-        self.top.formcombos = {}
+        self.top3.formcombos = {}
 
+        # loop through all the questions in this form (and associated text)
+        hp=0
         for qnum in formdata:
             fcopts = []
             maxlen=0
+            anum=0
+            defanum=-1
+
+            # process all text (if any) associated with this question
+            if qnum in formtext:
+                for tdata in formtext[qnum]:
+                    if "header1" in tdata:
+                        formlabels[qnum] = Label(formframe, text = tdata["header1"].strip(), wraplength=600, justify=CENTER, fg='orange', font=("Segoe Ui Bold",15))
+                        formlabels[qnum].grid(row = qnum+hp, column = 0, columnspan=2, sticky=NSEW, padx=10, pady=(0,10))
+                        hp+=1
+                    if "header2" in tdata:
+                        formlabels[qnum] = Label(formframe, text = tdata["header2"].strip(), wraplength=600, justify=CENTER, fg='#3399ff', font=("Segoe Ui Bold",13))
+                        formlabels[qnum].grid(row = qnum+hp, column = 0, columnspan=2, sticky=NSEW, padx=10, pady=(0,10))
+                        hp+=1
+                    if "header3" in tdata:
+                        formlabels[qnum] = Label(formframe, text = tdata["header3"].strip(), wraplength=600, justify=CENTER, fg='red', font=("Segoe Ui Bold",11))
+                        formlabels[qnum].grid(row = qnum+hp, column = 0, columnspan=2, sticky=NSEW, padx=10, pady=(0,10))
+                        hp+=1
+                    if "text" in tdata:
+                        formlabels[qnum] = Label(formframe, text = tdata["text"].strip(), wraplength=600, justify=CENTER)
+                        formlabels[qnum].grid(row = qnum+hp, column = 0, columnspan=2, sticky=NSEW, padx=10, pady=(0,10))
+                        hp+=1
+
+            # process all question/response data
             for qdata in formdata[qnum]:
                 if "question" in qdata:
                     formlabels[qnum] = ttk.Label(formframe, text = qdata["question"].strip(), wraplength=300, justify=RIGHT)
-                    formlabels[qnum].grid(row = qnum, column = 0, sticky=E, padx=10, pady=(0,10))
+                    formlabels[qnum].grid(row = qnum+hp, column = 0, sticky=E, padx=10, pady=(0,10))
 
-                    self.top.formcombos[qnum] = ttk.Combobox(formframe, values="", state='readonly')
-                    self.top.formcombos[qnum].grid(row = qnum, column = 1 , sticky=W, padx=10, pady=(0,10))
+                    self.top3.formcombos[qnum] = ttk.Combobox(formframe, values="", state='readonly')
+                    self.top3.formcombos[qnum].grid(row = qnum+hp, column = 1 , sticky=W, padx=10, pady=(0,10))
                 else:
-                    for i in qdata: qdatastr = str(i)+" "+str(qdata[i].strip())
+
+                    for i in qdata:
+                        qdatastr = str(i)+" "+str(qdata[i].strip())
+                        if str(qdata[i])[0] == "*":
+                            if defanum==-1: defanum=anum
+                        if type(friid) is str:
+                            if str(formresp_db[4][qnum-1])==str(i):
+                                defanum=anum
+                    anum+=1
                     fcopts.append(qdatastr)
-                    if maxlen < len(qdatastr): maxlen = len(qdatastr)
-            self.top.formcombos[qnum]["values"] = fcopts
-            self.top.formcombos[qnum]["width"] = maxlen
+                    if maxlen < len(qdatastr): maxlen = len(qdatastr)+2
+
+            self.top3.formcombos[qnum]["values"] = fcopts
+            self.top3.formcombos[qnum]["width"] = maxlen
+            if defanum>-1: self.top3.formcombos[qnum].current(defanum)
+            if type(friid) is str:
+                self.top3.formcombos[qnum].config(state=DISABLED)
 
         formcanvas.pack(side=LEFT,expand=True,fill=BOTH)
         formcanvas.config(xscrollcommand=hbar.set, yscrollcommand=vbar.set)
 
-        finish_frame=ttk.Frame(self.top)
-        finish_frame.grid(row=2, column=0, sticky='NEWS', padx=0, pady=0)
+        if type(friid) is not str:
+            finish_frame=ttk.Frame(self.top3)
+            finish_frame.grid(row=2, column=0, sticky='NEWS', padx=0, pady=0)
 
-        label_comment = ttk.Label(finish_frame, text = "Form Comment:")
-        label_comment.grid(row = 0, column = 0, padx=(10,10), pady=(20,0))
-        self.top.fcomment = ttk.Entry(finish_frame, width='34')
-        self.top.fcomment.grid(row = 0, column = 1, padx=(0,10), pady=(20,0))
-        post_button = ttk.Button(finish_frame, text = "Post Form to Expect", command = lambda : self.post_form(formid))
-        post_button.grid(row=0, column = 2, padx=(10,0), pady=(20,0))
-        post_button = ttk.Button(finish_frame, text = "Load Posted Expect Form", command = lambda : self.load_form(formid))
-        post_button.grid(row=0, column = 3, padx=(10,0), pady=(20,0))
+            label_comment = ttk.Label(finish_frame, text = "Form Comment:")
+            label_comment.grid(row = 0, column = 0, padx=(10,10), pady=(20,0))
+            self.top3.fcomment = ttk.Entry(finish_frame, width='34')
+            self.top3.fcomment.grid(row = 0, column = 1, padx=(0,10), pady=(20,0))
+            post_button = ttk.Button(finish_frame, text = "Post Form to Expect", command = lambda : self.post_form(formid))
+            post_button.grid(row=0, column = 2, padx=(10,0), pady=(20,0))
+            post_button = ttk.Button(finish_frame, text = "Load Posted Expect Form", command = lambda : self.load_form(formid))
+            post_button.grid(row=0, column = 3, padx=(10,0), pady=(20,0))
 
-        self.top.focus()
-        self.top.wait_visibility()
-        self.top.grab_set()
-        self.top.bind('<Escape>', lambda x: self.top.destroy())
+        self.top3.focus()
+        self.top3.wait_visibility()
+        self.top3.grab_set()
+        self.top3.bind('<Escape>', lambda x: self.top3.destroy())
 
     ## Load saved form from expect system if it exists
     def load_form(self, formid):
@@ -2297,39 +2468,39 @@ class App(tk.Tk):
                 for resp in form_resps[2]:
                     qnum+=1
                     cnum=0
-                    for index in self.top.formcombos[qnum]["values"]:
-                        if index[0] == resp: self.top.formcombos[qnum].current(cnum)
+                    for index in self.top3.formcombos[qnum]["values"]:
+                        if index[0] == resp: self.top3.formcombos[qnum].current(cnum)
                         cnum+=1
 
             if form_resps[3]!="":
-                self.top.fcomment.insert(0, form_resps[3])
+                self.top3.fcomment.insert(0, form_resps[3])
         else:
-            messagebox.showinfo("Form Not Found","A matching previously posted form was not found in the expect system.", parent=self.top)
+            messagebox.showinfo("Form Not Found","A matching previously posted form was not found in the expect system.", parent=self.top3)
 
     ## Process form to expect system
     def post_form(self, formid):
-        formdata = self.form_items(formid)
+        formdata, formtext = self.form_items(formid)
 
         resps = ""
         for qnum in formdata:
-            answer=str(self.top.formcombos[qnum].get())
+            answer=str(self.top3.formcombos[qnum].get())
             if answer:
                 resps+=answer[0]
             else:
-                messagebox.showinfo("Please complete the form","Please make a selection for each box on the form before posting.", parent=self.top)
+                messagebox.showinfo("Please complete the form","Please make a selection for each box on the form before posting.", parent=self.top3)
                 return
 
         ecst = self.encode_shorttime()
-        cmt = self.top.fcomment.get().upper()
+        cmt = self.top3.fcomment.get().upper()
         fresp = formid+" "+resps+" "+cmt+" "+ecst
 
         msgtxt = "Post the following form response to the Expect system?\n\n"+formid+" "+fresp+"\n\nThis will overwrite any existing response to this form."
-        answer = askyesno(title='Post Form Response?', message=msgtxt, parent=self.top)
+        answer = askyesno(title='Post Form Response?', message=msgtxt, parent=self.top3)
         if answer:
             sql = "INSERT INTO expect(expect,reply,allowed,txmax,txlist,lm) VALUES (?,?,?,?,?, CURRENT_TIMESTAMP)"
             c.execute(sql,[formid,fresp,"*","99",""])
             conn.commit()
-            self.top.destroy()
+            self.top3.destroy()
 
     ## Build/rebuild reports sub-menu from database
     def build_formsmenu(self):
@@ -2342,7 +2513,7 @@ class App(tk.Tk):
                 self.formsmenu.delete(0,self.formsmenu.index('end'))
 
         for record in forms:
-            self.formsmenu.add_command(label = record+" "+forms[record][0], command = lambda formid=record: self.form_view(formid))
+            self.formsmenu.add_command(label = record+" "+forms[record][0], command = lambda formid=record: self.form_view(formid,0))
 
         self.update()
 
@@ -2365,11 +2536,29 @@ class App(tk.Tk):
     def form_items(self,formid):
         global forms
         formdata={}
+        formtext={}
         qindex=0
 
         if formid in forms.keys():
             with open(forms[formid][1]) as form_file:
                 for form_line in form_file:
+
+                    if form_line[0]=="!":
+                        hv="header1"
+                        if form_line[1]=="!": hv="header2"
+                        if form_line[2]=="!": hv="header3"
+
+                        if qindex+1 in formtext:
+                            formtext[qindex+1].extend([{hv:form_line.partition(" ")[2]}])
+                        else:
+                            formtext[qindex+1]=[{hv:form_line.partition(" ")[2]}]
+
+                    if form_line[0]==".":
+                        if formtext[qindex+1]:
+                            formtext[qindex+1].extend([{"text":form_line.partition(" ")[2]}])
+                        else:
+                            formtext[qindex+1]=[{"text":form_line.partition(" ")[2]}]
+
                     if form_line[0]=="?":
                         qindex+=1
                         formdata[qindex]=[{"question":form_line.partition(" ")[2]}]
@@ -2377,9 +2566,9 @@ class App(tk.Tk):
                     if form_line[0]=="@" and qindex>0:
                         if formdata[qindex]:
                             formdata[qindex].extend([{form_line[1]:form_line.partition(" ")[2]}])
-        return formdata
+        return formdata, formtext
 
-    ## Send APRS SMS
+    ## Send APRS SMS (deprecated for now, but leaving code in case SMS gateway is re-activated
     def aprs_sms(self):
         self.top = Toplevel(self)
         self.top.title("APRS: Send SMS Text")
@@ -2571,8 +2760,6 @@ class App(tk.Tk):
         self.sms_cmd.delete(0,END)
         self.sms_cmd.insert(0,aprs_cmd)
 
-
-
     ## Process (send/tx) APRS cmd
     def proc_aprscmd(self):
         new_cmd = self.sms_cmd.get()
@@ -2710,22 +2897,31 @@ class App(tk.Tk):
     ## Minimalistic low resolution timestamp for MCForms (a full timestamp is known when a report is received. year is inferred from that)
     def decode_shorttime(self, ststamp):
         dcst=""
-
-        ma = ord(ststamp[1]) # Month, A-L (1-12)
+        # note that ststamp has # at the beginning (position 0)
         m = ""
-        if ma>64 and ma<77: m = str(ma-64)
+        if len(ststamp) > 1:
+            ma = ord(ststamp[1]) # Month, A-L (1-12)
+            if ma>64 and ma<77: m = str(ma-64)
+        else:
+            m="0"
 
-        da = ord(ststamp[2]) # Day, A-Z = 1-26, 0-4 = 27-31
         d = ""
-        if da>47 and da<53: d = str((da-47)+26)
-        if da>64 and da<91: d = str(da-64)
+        if len(ststamp) > 2:
+            da = ord(ststamp[2]) # Day, A-Z = 1-26, 0-4 = 27-31
+            if da>47 and da<53: d = str((da-47)+26)
+            if da>64 and da<91: d = str(da-64)
+        else:
+            d="0"
 
-        ha = ord(ststamp[3]) # Hour, A-W = 0-23
         h=""
-        if ha>64 and ha<88: h = str(ha-64)
+        if len(ststamp) > 3:
+            ha = ord(ststamp[3]) # Hour, A-W = 0-23
+            if ha>64 and ha<88: h = str(ha-64)
+        else:
+            h="00"
 
         t=""
-        if len(ststamp) == 5: # previous version had only three (plus #) characters, so we'll have this be optional
+        if len(ststamp) > 4: # previous version had only three (plus #) characters, so we'll have this be optional
             ma = ord(ststamp[4]) # Minutes, 2min resolution, A-Z and 0-3 (A=0, B=2, C=4, etc)
             if ma>47 and ma<52: t = h+":"+str(((ma-48)+26)*2).zfill(2)
             if ma>64 and ma<91: t = h+":"+str((ma-65)*2).zfill(2)
@@ -2745,8 +2941,9 @@ class App(tk.Tk):
         if da<27: d=chr(da+64)
         if da>26: d=chr(da+47)
         h=chr(time.localtime(time.time())[3]+64)
-        mi=chr(int(time.localtime(time.time())[4]/2)+1+64)
-        ecst = "#"+m+d+h+mi
+        mi=int(time.localtime(time.time())[4]/2)+1+64
+        if mi>90: mi-=43
+        ecst = "#"+m+d+h+chr(mi)
         return ecst
 
     ## Update status bar in main window based on certain activities

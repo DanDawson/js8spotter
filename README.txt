@@ -188,13 +188,14 @@ files located in the forms folder. Their format is as follows:
 
 * First line MUST be the human readable title of the form, then the pipe
   symbol |, and then the form ID. Like this example: Test Form|F!001
-* A question line starts with a question mark and space, followed by
-  the text of the question, as: ? What is your favorite color?
-* All answer lines that follow, up to the next question, will be associated.
-* Answer lines start with an at symbol and response character, a space, and
-  then the text of the answer, as: @1 Red
-* A question may have up to 36 answers (A-Z an 0-9 are valid response chars)
-* Blank lines are ignored. Lines that start with anything other than ? or @
+* Headers are created with !<space><text>, with one, two or three ! for header
+  levels 1, 2, and 3, as in: ! Important Info
+* Display text / instructions are created with .<space><text>, as: . Test
+* A Question line is created with ?<space><text>, as: ? What is your favorite color?
+* All Answer lines that follow, up to the next question, will be associated.
+* Answer lines are created with @<space><text>, as: @1 Red, or @Y Yes
+* A Question may have up to 36 Answers (A-Z an 0-9 are valid response chars)
+* Blank lines are ignored. Lines that start with anything other than !.?@
   are also ignored.
 * It is recommended that comments start with #. The first line of the file
   MUST be as described above, and not a comment.
@@ -207,7 +208,10 @@ For more form format details, view the included forms in the forms folder.
 
 Filled out forms are posted to the Expect system. When collected over the air,
 received form responses will be in the tools menu under form responses for
-easy viewing.
+easy viewing. Viewing in text mode is availble by double-clicking a response,
+viewing in GUI mode is available by selecting and right-clicking. Responses may
+be forwarded to other stations or groups. Responses may be deleted with the
+delete key.
 
 The form responses window has a gateway option. If a URL is entered, your system
 will automatically forward received forms to your gateway. A test gateway is
@@ -221,8 +225,8 @@ an an email, POTA Gateway, or reporting your grid location.
 
 # Support
 
-I'm a hobbyist programmer, and I've done very little GUI programming. Keep it
-in mind.
+Thank you for your help, testing, bug reports, and encouragement! I'm a hobbyist
+programmer, and I've done very little GUI programming.
 
 The software is free, but I'd be happy to lend a hand with it as needed. Contact
 KF7MIX via the information on QRZ.com with questions.
