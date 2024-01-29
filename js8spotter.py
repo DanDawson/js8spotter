@@ -32,6 +32,7 @@ import shutil
 swname = "JS8Spotter"
 fromtext = "de KF7MIX"
 swversion = "1.08b"
+db_directory = '.js8spotter'
 dbfile = 'js8spotter.db'
 conn = sqlite3.connect(dbfile)
 c = conn.cursor()
