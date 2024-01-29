@@ -7,7 +7,7 @@
 
 A JS8Call API mechanism to track activity containing specific search
 terms, including callsigns or other activity. Matches on RX.ACTIVITY,
-RX.DIRECTED, and RX.SPOT only. Tested with JS8Call v2.2.0
+RX.DIRECTED, and RX.SPOT only. Tested with JS8Call v2.2.0 and v2.2.1
 
 
 # Settings
@@ -221,7 +221,8 @@ available at kf7mix.com, or program your own gateway to receive forms data.
 
 JS8Call supports APRSIS gateway commands. The APRS options in the Tools menu
 help you format these commands for easy and quick use. Use them for sending
-an an email, POTA Gateway, or reporting your grid location.
+an SMS (with registration on the target phone side, see http://aprs.wiki/SMS/),
+an email, POTA Gateway, or reporting your grid location.
 
 # Support
 
