@@ -2,6 +2,11 @@
 # You should have received a copy of the source and license with this application
 
 # Change Log (latest first)
+2024-01-16    v1.08b	Fixed a bug in MCForms window scrolling canvas size
+						Fixed a bug in forms import
+						Re-enabled APRS SMS with new gateway (http://aprs.wiki/SMS/)
+						Allow select multiple items in Form Responses, delete multiple items
+						Fixed error loading form response when form template changed
 2023-10-24    v1.07b    Made 99=inifite in allowed expect responses
                         Added ability to clear Sent To list in Expect
                         Added ability to set default form response with * at start of answer text (as in "@Y *Yes")

@@ -70,7 +70,8 @@ JS8Spotter Quick Help
     The built-in APRS commands will format the proper JS8Call string to transmit
     an APRS command to a listening station. With these you may:
 
-    * Send an email
+    * Send an SMS (target phone number must be registered with http://aprs.wiki/SMS/)
+	* Send an email
     * Report your grid location to the APRS network
     * Submit to the POTA Gateway
 

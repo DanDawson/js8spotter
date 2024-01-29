@@ -1,7 +1,7 @@
-# JS8Spotter v1.07b. Visit https://kf7mix.com/js8spotter.html for information
+# JS8Spotter v1.08b. Visit https://kf7mix.com/js8spotter.html for information
 # Special thanks to KE0DHO, KF0HHR, N0GES, N6CYB, KQ4DRG, NK8O, N0YJ, KI6ESH, N4FWD, KQ4HQD, and everyone else who has contributed
 #
-# MIT License, Copyright 2023 Joseph D Lyman KF7MIX --- Permission is hereby granted,  free of charge, to any person obtaining a copy of this software and associated documentation files
+# MIT License, Copyright 2024 Joseph D Lyman KF7MIX --- Permission is hereby granted,  free of charge, to any person obtaining a copy of this software and associated documentation files
 # (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
 # of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:  The above copyright notice and this permission notice shall be
 # included in all copies or substantial portions of the Software.  The Software IS PROVIDED "AS IS",  WITHOUT WARRANTY OF ANY KIND,  EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE
@@ -30,7 +30,7 @@ import requests
 ### Globals
 swname = "JS8Spotter"
 fromtext = "de KF7MIX"
-swversion = "1.07b"
+swversion = "1.08b"
 
 dbfile = 'js8spotter.db'
 conn = sqlite3.connect(dbfile)
@@ -181,7 +181,6 @@ class TCP_RX(Thread):
                             ## Multiple Choice Forms (MCF) subsystem. Check for prefix "F!<three digits> <form response> <msg> <datecode>" in any incoming data
 
                             # Add \/?\-?[A-Z0-9]? to callsign detection, for /P and other tactical calls
-                            #scan_forms = re.search("([A-Z0-9]+):\s+?(@?[A-Z0-9]+)\s+?(.*\s+)?(F\![A-Z0-9]{3})\s+?([A-Z0-9]+)\s+?(.*?)(\#[A-Z0-9]+)",msg_value) # from, to, <optional E? or MSG etc. group not used>, form ID, form responses, msg, timestamp
                             scan_forms = re.search("([A-Z0-9]+)\/?\-?[A-Z0-9]?:\s+?(@?[A-Z0-9]+)\/?\-?[A-Z0-9]?\s+?(.*\s+)?(F\![A-Z0-9]{3})\s+?([A-Z0-9]+)\s+?(.*?)(\#[A-Z0-9]+)",msg_value) # from, to, <optional E? or MSG etc. group not used>, form ID, form responses, msg, timestamp
                             if scan_forms:
                                 # forward to gateway if user has one configured
@@ -199,7 +198,6 @@ class TCP_RX(Thread):
                                 conn1.commit()
                                 event.set()
 
-                            #scan_formsrelay = re.search("([A-Z0-9]+):\s+?(@?[A-Z0-9>]+)\s+?(.*\s+)?(F\![A-Z0-9]{3})\s+?([A-Z0-9]+)\s+?(.*?)(\#[A-Z0-9]+)\s+?\*DE\*\s+?([A-Z0-9]+)",msg_value)
                             scan_formsrelay = re.search("([A-Z0-9]+)\/?\-?[A-Z0-9]?:\s+?(@?[A-Z0-9>]+)\/?\-?[A-Z0-9]?\s+?(.*\s+)?(F\![A-Z0-9]{3})\s+?([A-Z0-9]+)\s+?(.*?)(\#[A-Z0-9]+)\s+?\*DE\*\s+?([A-Z0-9]+)\/?\-?[A-Z0-9]?",msg_value)
                             if scan_formsrelay:
                                 # forward to gateway if user has one configured
@@ -388,7 +386,7 @@ class App(tk.Tk):
         self.toolsmenu.add_cascade(label = 'MCForms - Forms', menu = self.formsmenu)
         self.toolsmenu.add_command(label = 'MCForms - Responses', command = self.form_responses)
         self.toolsmenu.add_separator()
-        #self.toolsmenu.add_command(label = 'APRS - SMS Text', command = self.aprs_sms)
+        self.toolsmenu.add_command(label = 'APRS - SMS Text', command = self.aprs_sms)
         self.toolsmenu.add_command(label = 'APRS - Email', command = self.aprs_email)
         self.toolsmenu.add_command(label = 'APRS - Report Grid', command = self.aprs_grid)
         self.toolsmenu.add_command(label = 'APRS - POTA Gateway', command = self.aprs_pota)
@@ -1267,11 +1265,11 @@ class App(tk.Tk):
         self.top.gridcall.bind('<Double-1>', self.highlight_grid)
         self.top.gridcall.bind('<Delete>', self.delete_grid)
         self.top.gridcall.bind('<Button-3>', self.delete_grid)
-        self.top.gridcall.grid(row=0, column=1, sticky='NSEW', padx=(10,0), pady=(10,10))
+        self.top.gridcall.grid(row=0, column=1, sticky='NSEW', padx=(10,0), pady=(10,0))
 
         self.top.gcscrollbar = ttk.Scrollbar(self.top, orient=tk.VERTICAL, command=self.top.gridcall.yview)
         self.top.gridcall.configure(yscroll=self.top.gcscrollbar.set)
-        self.top.gcscrollbar.grid(row=0, column=2, sticky='NS', padx=(0,0), pady=(10,10))
+        self.top.gcscrollbar.grid(row=0, column=2, sticky='NS', padx=(0,0), pady=(10,0))
         self.top.gridcall.tag_configure('notshown', foreground='gray')
 
         # map frame
@@ -1281,17 +1279,20 @@ class App(tk.Tk):
 
         # status info box for highlighted marker
         self.top.grid_status = ttk.Entry(self.top, width = '75')
-        self.top.grid_status.grid(row = 1, column = 0)
+        self.top.grid_status.grid(row = 1, column = 0, sticky='W', padx=(8,8), pady=(8,8))
+
+        self.top.grid_clearbtn = ttk.Button(self.top, text = 'Clear', command = self.clear_grid, width='4')
+        self.top.grid_clearbtn.grid(row=1, column = 0, sticky='E', padx=(8,8), pady=(8,8))
 
         # map select
         self.top.maploc = ttk.Combobox(self.top, values=maplocs, state='readonly', width='15')
-        self.top.maploc.grid(row=1, column =1, sticky='NW', padx=(10,0))
+        self.top.maploc.grid(row=1, column =1, sticky='NW', padx=(10,0), pady=10)
         self.top.maploc.current(map_loc)
         self.top.maploc.bind('<<ComboboxSelected>>', self.maploc_sel_combo)
 
         # show marker count select
         self.top.markershow = ttk.Combobox(self.top, values=markeropts, state='readonly', width='14')
-        self.top.markershow.grid(row=1, column =1, sticky='NE')
+        self.top.markershow.grid(row=1, column =1, sticky='NE', pady=(10,0))
         self.top.markershow.current(settings['marker_index'])
         self.top.markershow.bind('<<ComboboxSelected>>', self.markershow_sel_combo)
 
@@ -1457,6 +1458,15 @@ class App(tk.Tk):
         answer = askyesno(title="Remove Map Record?", message="This will delete "+gciid+" from the map database. Continue?", parent=self.top)
         if answer:
             c.execute("DELETE FROM grid WHERE grid_callsign = ?", [gciid])
+            conn.commit()
+            self.update_grid()
+
+    ## Delete ALL items from grid map list
+    def clear_grid(self):
+
+        answer = askyesno(title="Clear All Grids?", message="This will delete ALL callsign grids from the map database. Continue?", parent=self.top)
+        if answer:
+            c.execute("DELETE FROM grid")
             conn.commit()
             self.update_grid()
 
@@ -1908,7 +1918,7 @@ class App(tk.Tk):
         self.drcombo.bind('<<ComboboxSelected>>', self.formtype_selcombo)
 
         # form response treeview
-        self.formresp = ttk.Treeview(self.top, show='headings', selectmode="browse")
+        self.formresp = ttk.Treeview(self.top, show='headings') #, selectmode="browse")
         self.formresp["columns"]=("fromcall","tocall","typeid","response","msgtxt","timesig","gw","lm")
 
         self.formresp.column("fromcall", width=60, minwidth=60, stretch=0)
@@ -2191,12 +2201,12 @@ class App(tk.Tk):
     def delete_formresp(self,ev):
         frlist = ""
         for friid in self.formresp.selection():
-            frlist += "DBID ["+friid+"] from "+str(self.formresp.item(friid)['values'][0])+" received "+str(self.formresp.item(friid)['values'][6])+"\n"
+            frlist += "DBID ["+friid+"] from "+str(self.formresp.item(friid)['values'][0])+" received "+str(self.formresp.item(friid)['values'][7])+"\n"
 
         if frlist == "": return
 
-        msgtxt = "Remove the following form response? This action cannot be undone.\n\n"+frlist
-        answer = askyesno(title='Remove Form Response?', message=msgtxt, parent=self.top)
+        msgtxt = "Remove the following form response(s)? This action cannot be undone.\n\n"+frlist
+        answer = askyesno(title='Remove Form Response(s)?', message=msgtxt, parent=self.top)
         if answer:
             for friid in self.formresp.selection():
                 c.execute("DELETE FROM forms WHERE id = ?", [friid])
@@ -2237,7 +2247,7 @@ class App(tk.Tk):
         for line in batch_values:
 
             # format is FROM<space>TO<space>FORM#<space>RESPS<space>MSG<space>TIMESIG
-            match_forms = re.search("([A-Z0-9]+)\s+([A-Z0-9]+)\s+(F![A-Z0-9]{3})\s+([A-Z0-9]+)\s+([A-Z0-9 ]+)?\s+(\#[A-Z]+)",line)
+            match_forms = re.search("([A-Z0-9]+)\s+([A-Z0-9]+)\s+(F![A-Z0-9]{3})\s+([A-Z0-9]+)\s+(.*)?\s+(\#[A-Z]+)",line)
             if match_forms:
                 sql = "INSERT INTO forms(fromcall,tocall,typeid,responses,msgtxt,timesig,lm,gwtx) VALUES (?,?,?,?,?,?, CURRENT_TIMESTAMP,'')"
                 c.execute(sql, [match_forms[1],match_forms[2],match_forms[3],match_forms[4],match_forms[5],match_forms[6]])
@@ -2422,8 +2432,13 @@ class App(tk.Tk):
                         if str(qdata[i])[0] == "*":
                             if defanum==-1: defanum=anum
                         if type(friid) is str:
-                            if str(formresp_db[4][qnum-1])==str(i):
-                                defanum=anum
+                            try:
+                                if str(formresp_db[4][qnum-1])==str(i):
+                                    defanum=anum
+                            except IndexError:
+                                # So that partial forms still display the available data.
+                                # Shouldn't normally happen, but may happen if a form template changes and you have old saved forms
+                                pass
                     anum+=1
                     fcopts.append(qdatastr)
                     if maxlen < len(qdatastr): maxlen = len(qdatastr)+2
@@ -2450,10 +2465,14 @@ class App(tk.Tk):
             post_button = ttk.Button(finish_frame, text = "Load Posted Expect Form", command = lambda : self.load_form(formid))
             post_button.grid(row=0, column = 3, padx=(10,0), pady=(20,0))
 
+        formcanvas.update_idletasks()
+        formcanvas.configure(scrollregion = formcanvas.bbox('all'))
+
         self.top3.focus()
         self.top3.wait_visibility()
         self.top3.grab_set()
         self.top3.bind('<Escape>', lambda x: self.top3.destroy())
+
 
     ## Load saved form from expect system if it exists
     def load_form(self, formid):
@@ -2568,29 +2587,32 @@ class App(tk.Tk):
                             formdata[qindex].extend([{form_line[1]:form_line.partition(" ")[2]}])
         return formdata, formtext
 
-    ## Send APRS SMS (deprecated for now, but leaving code in case SMS gateway is re-activated
+    ## Send APRS SMS (http://aprs.wiki/SMS/ -- ONLINE OPT IN REQUIRED!)
     def aprs_sms(self):
         self.top = Toplevel(self)
         self.top.title("APRS: Send SMS Text")
         self.top.resizable(width=False, height=False)
 
+        label_new = ttk.Label(self.top, text = "Phone numbers must be registered at http://aprs.wiki/SMS/")
+        label_new.grid(row = 0, column = 0, columnspan=2, padx=(10,0), pady=(20,0))
+
         label_new = ttk.Label(self.top, text = "Phone Number")
-        label_new.grid(row = 0, column = 0, padx=(10,0), pady=(20,0))
+        label_new.grid(row = 1, column = 0, padx=(10,0), pady=(20,0))
         self.sms_phone = ttk.Entry(self.top, width='34')
-        self.sms_phone.grid(row = 0, column = 1, padx=(0,10), pady=(20,0))
+        self.sms_phone.grid(row = 1, column = 1, padx=(0,10), pady=(20,0))
         self.sms_phone.bind("<KeyRelease>", lambda x: self.update_aprssms())
 
         label_new = ttk.Label(self.top, text = "Message (32 char)")
-        label_new.grid(row = 1, column = 0, padx=(10,0), pady=(10,0))
+        label_new.grid(row = 2, column = 0, padx=(10,0), pady=(10,0))
         self.sms_msg = ttk.Entry(self.top, width='34')
-        self.sms_msg.grid(row = 1, column = 1, padx=(0,10), pady=(10,0))
+        self.sms_msg.grid(row = 2, column = 1, padx=(0,10), pady=(10,0))
         self.sms_msg.bind("<KeyRelease>", lambda x: self.update_aprssms())
 
         self.sms_cmd = ttk.Entry(self.top)
-        self.sms_cmd.grid(row = 2, column = 0, columnspan=2, stick='NSEW', padx=(10,10), pady=(20,0))
+        self.sms_cmd.grid(row = 3, column = 0, columnspan=2, stick='NSEW', padx=(10,10), pady=(20,0))
 
         cbframe = ttk.Frame(self.top)
-        cbframe.grid(row=3, columnspan=2, sticky='e', padx=10)
+        cbframe.grid(row=4, columnspan=2, sticky='e', padx=10)
 
         create_button = ttk.Button(cbframe, text = "Send", command = self.proc_aprscmd)
         create_button.grid(row=0, column = 1, padx=(10,0), pady=(20,20))
@@ -2610,7 +2632,9 @@ class App(tk.Tk):
         if phone=="" or msg=="":
             self.sms_cmd.delete(0,END)
             return
-        aprs_cmd = "@APRSIS CMD :SMSGTE   :@"+phone+" "+msg+"{01}"
+#        aprs_cmd = "@APRSIS CMD :SMSGTE   :@"+phone+" "+msg+"{01}" # old version
+        aprs_cmd = "@APRSIS CMD :SMS      :@"+phone+" "+msg+"{01}"
+
         self.sms_cmd.delete(0,END)
         self.sms_cmd.insert(0,aprs_cmd)
 
@@ -2894,7 +2918,7 @@ class App(tk.Tk):
             if int(octet) < 0 or int(octet) > 255: return False
         return True
 
-    ## Minimalistic low resolution timestamp for MCForms (a full timestamp is known when a report is received. year is inferred from that)
+    ## Minimalistic low resolution timestamp for MCForms (a full timestamp is known when a report is received. year is inferred from that by the operator)
     def decode_shorttime(self, ststamp):
         dcst=""
         # note that ststamp has # at the beginning (position 0)
