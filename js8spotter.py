@@ -26,12 +26,13 @@ import sqlite3
 import re
 import os
 import requests
+import shutil
 
 ### Globals
 swname = "JS8Spotter"
 fromtext = "de KF7MIX"
-swversion = "1.09b"
 
+swversion = "1.09b"
 dbfile = 'js8spotter.db'
 conn = sqlite3.connect(dbfile)
 c = conn.cursor()
@@ -73,6 +74,34 @@ gridmultiplier = [
     },
 ]
 markeropts = ["Latest 100", "Latest 50", "Latest 25", "Latest 10"]
+
+### Set some relative path variables
+
+# Find the path to the users Home folder
+user_home_path = os.path.expanduser('~')
+
+# Set the path to where the database is to be stored
+db_directory_path = os.path.join(user_home_path,db_directory)
+
+db_path = os.path.join(db_directory_path, dbfile)
+
+# Determine the directory the script is running from
+script_path = os.path.realpath(os.path.join(os.path.dirname(__file__)))
+
+# Check if a database file already exists. 
+# If it does exit, use that database
+# If it doesn't exist, copy a blank database to the user's database directory path
+ifDatabasePathExist = os.path.exists(db_directory_path)
+if not ifDatabasePathExist:
+    os.makedirs(db_directory_path)
+
+ifDatabaseExist = os.path.exists(os.path.join(db_directory_path,dbfile))
+if not ifDatabaseExist:
+    shutil.copyfile(os.path.join(script_path, 'js8spotter.db.blank'),os.path.join(db_directory_path, dbfile))
+
+# Connect to the database
+conn = sqlite3.connect(os.path.join(db_directory_path,dbfile))
+c = conn.cursor()
 
 ### Database work
 ## Clean-up tables
@@ -135,7 +164,7 @@ class TCP_RX(Thread):
         self.keep_running = False
 
     def run(self):
-        conn1 = sqlite3.connect(dbfile) # we need our own db connection in this thread
+        conn1 = sqlite3.connect(os.path.join(db_directory_path,dbfile)) # we need our own db connection in this thread
         c1 = conn1.cursor()
 
         track_types = {"RX.ACTIVITY", "RX.DIRECTED", "RX.SPOT"}
@@ -326,7 +355,7 @@ class App(tk.Tk):
         self.protocol("WM_DELETE_WINDOW", self.menu_bye)
 
         self.style = Style()
-        self.call("source", "azure.tcl")
+        self.call("source", os.path.join(script_path, "azure.tcl"))
         self.create_gui()
         self.eval('tk::PlaceWindow . center')
         self.activate_theme()
@@ -2731,7 +2760,9 @@ class App(tk.Tk):
         global forms
 
         forms_unsorted = {}
-        for mcffile in os.scandir('./forms'):
+        forms_dir = os.path.join(script_path, 'forms')
+        
+        for mcffile in os.scandir(forms_dir):
             if mcffile.path.endswith('txt'):
                 with open(mcffile) as f: first_line = f.readline().strip('\n')
                 forms_unsorted[first_line.split("|")[1]]=(first_line.split("|")[0],mcffile.path)

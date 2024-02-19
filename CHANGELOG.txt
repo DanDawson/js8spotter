@@ -6,10 +6,10 @@
                         Added export in detail log view
                         Added import/export in Expect
 2024-01-16    v1.08b	Fixed a bug in MCForms window scrolling canvas size
-						Fixed a bug in forms import
-						Re-enabled APRS SMS with new gateway (http://aprs.wiki/SMS/)
-						Allow select multiple items in Form Responses, delete multiple items
-						Fixed error loading form response when form template changed
+                        Fixed a bug in forms import
+                        Re-enabled APRS SMS with new gateway (http://aprs.wiki/SMS/)
+                        Allow select multiple items in Form Responses, delete multiple items
+                        Fixed error loading form response when form template changed
 2023-10-24    v1.07b    Made 99=inifite in allowed expect responses
                         Added ability to clear Sent To list in Expect
                         Added ability to set default form response with * at start of answer text (as in "@Y *Yes")
@@ -24,9 +24,9 @@
                         Fixed bug when older versions submit an MCForm with shorter datecode
                         Fixed issue with detecting /P and other tactical calls
                         Removed defunct APRSIS sms messaging
-						Added ability to hide rx.activity and rx.directed in main window
-						Added ability to import/add form responses
-						Added APRSIS POTAGW function
+                        Added ability to hide rx.activity and rx.directed in main window
+                        Added ability to import/add form responses
+                        Added APRSIS POTAGW function
 2023-03-24    v1.05b    Fixed bug with spaces in expect allowed list
                         Renamed the "allowed" input in Expect to match the list view name
                         Adjusted frame/grid to help with text cutoff on some systems
