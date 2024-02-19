@@ -57,6 +57,7 @@ JS8Spotter Quick Help
     * Right-click to edit an entry
     * Double-click to view details of an entry
     * The Send Now button will let you TX an expect entry manually
+    * Import/Export, tab-delimited, view export contents for format of import
     * MCForms filled-out forms are posted as expect entries
 
 ## MCForms Subsystem
