@@ -1,0 +1,96 @@
+# JS8Spotter MIT License, Joe Lyman KF7MIX
+# You should have received a copy of the source and license with the program
+
+# Linux Notes
+
+
+## Note on System Variability
+
+Linux systems vary wildly. This README.linux file can't possibly cover every
+situation; in reality, it barely covers anything. You will need to take the very
+limited concepts you find here and adapt them to your situation. If you have
+more questions, reach out to me via the email listed on QRZ.com.
+
+
+## Which JS8Spotter Distribution Files to Use
+
+Linux users may choose to download the full Windows installer package, but it
+includes many files that are not needed on a Linux system. If you downloaded
+and unpacked the Windows package, you may wish to remove it and switch to the
+source version instead.
+
+
+## Program Requirements
+
+To run JS8Spotter on Linux you will need a working Python3 installation, pip3.
+On a debian/Ubuntu type system, you might install python3 and pip with the
+command 'sudo apt install python3 python3-pip'.
+
+You'll also need a few additional python modules/libraries. The best way to see
+what you will need to have is to open the js8spotter.py file and look at the
+imports at the beginning of the file. Another way to determine which modules/
+libraries you'll need is to simply run the program and see what it complains
+about. Open a terminal and navigate to the js8spotter directory, then run the
+program with a command like 'python3 ./js8spotter.py'
+
+
+If you see an error like:
+
+    No module named 'tkinter'
+
+Try to resolve it by installing the missing item with ONE of these commands:
+
+    pip3 install tkinter
+    sudo apt install python3-tk
+
+
+If you see an error like:
+
+    ImportError: cannot import name 'ImageTk' from 'PIL'
+
+Try to resolve it by installing the missing item with ONE of these commands:
+
+    pip3 install pillow
+    sudo apt install python3-pil python3-pil.imagetk
+
+
+After you install one missing item, run the program again, and work through any
+missing items that come up. Most systems require only an additional library or
+two, beyond what is installed when you install python3.
+
+
+## Application Launcher
+
+I personally run JS8Spotter from a terminal window every time. You might prefer
+something a little more GUI-centric. In many modern Linux systems you can create
+a program launcher by dropping a .desktop file in your ~/Desktop folder. There
+are other ways to do this, or to add the program to your system menus, etc. An
+example .desktop file (say, ~/Desktop/JS8Spotter.desktop) is below, with my
+own static directory variables:
+
+
+[Desktop Entry]
+Type=Application
+Name=JS8Spotter
+Comment=Companion Program for JS8Call
+Path=/home/jlyman/src/js8spotter/
+Exec=/home/jlyman/src/js8spotter/js8spotter.py
+Icon=/home/jlyman/src/js8spotter/js8spotter.ico
+
+
+## Python Script Executable
+
+If you create a .desktop file, you'll need to set your script up to be 
+executable. On many systems, adding the line '#!/usr/bin/env python3' to the
+top of the file, then setting it 'chmod a+x', will do the trick. However, you
+might keep your env binary elsewhere, or prefer not to set things world
+executable. So, do whatever is right for you in this regard.
+
+
+## More Help?
+
+You perhaps have noticed that I'm taking a minimalist approach to the Linux
+version of this program. I'm a fan of minimalism, it's one of the reasons I
+love Linux. There are no plans for repo builds or packages, the above is the
+plan. If you need more help, email me and I'll see what I can do!
+

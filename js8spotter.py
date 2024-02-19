@@ -1,4 +1,4 @@
-# JS8Spotter v1.08b. Visit https://kf7mix.com/js8spotter.html for information
+# JS8Spotter v1.09b. Visit https://kf7mix.com/js8spotter.html for information
 # Special thanks to KE0DHO, KF0HHR, N0GES, N6CYB, KQ4DRG, NK8O, N0YJ, KI6ESH, N4FWD, KQ4HQD, and everyone else who has contributed
 #
 # MIT License, Copyright 2024 Joseph D Lyman KF7MIX --- Permission is hereby granted,  free of charge, to any person obtaining a copy of this software and associated documentation files
@@ -30,7 +30,7 @@ import requests
 ### Globals
 swname = "JS8Spotter"
 fromtext = "de KF7MIX"
-swversion = "1.08b"
+swversion = "1.09b"
 
 dbfile = 'js8spotter.db'
 conn = sqlite3.connect(dbfile)
@@ -44,8 +44,8 @@ forms = {}
 totals = {}
 speeds = {"0":"Normal", "1":"Fast", "2":"Turbo", "4":"Slow", "8":"Ultra"}
 
-map_loc = 0 # for maps, 0=North America, 1=Europe
-maplocs = ["North America", "Europe"]
+map_loc = 0 # for maps, 0=North America, 1=Europe, 2=Australia, 3=Indonesia
+maplocs = ["North America", "Europe", "Australia", "Indonesia"]
 gridmultiplier = [
     {
         "CO":[0,3], "DO":[1,3], "EO":[2,3], "FO":[3,3],
@@ -58,6 +58,18 @@ gridmultiplier = [
         "IO":[0,2], "JO":[1,2], "KO":[2,2], "LO":[3,2],
         "IN":[0,1], "JN":[1,1], "KN":[2,1], "LN":[3,1],
         "IM":[0,0], "JM":[1,0], "KM":[2,0], "LM":[3,0],
+    },
+    {
+        "OH":[0,3], "PH":[1,3], "QH":[2,3], "RH":[3,3],
+        "OG":[0,2], "PG":[1,2], "QG":[2,2], "RG":[3,2],
+        "OF":[0,1], "PF":[1,1], "QF":[2,1], "RF":[3,1],
+        "OE":[0,0], "PE":[1,0], "QE":[2,0], "RE":[3,0],
+    },
+    {
+        "OL":[0,3], "PL":[1,3], "QL":[2,3], "RL":[3,3],
+        "OK":[0,2], "PK":[1,2], "QK":[2,2], "RK":[3,2],
+        "OJ":[0,1], "PJ":[1,1], "QJ":[2,1], "RJ":[3,1],
+        "OI":[0,0], "PI":[1,0], "QI":[2,0], "RI":[3,0],
     },
 ]
 markeropts = ["Latest 100", "Latest 50", "Latest 25", "Latest 10"]
@@ -78,7 +90,7 @@ c.execute("SELECT * FROM setting")
 dbsettings = c.fetchall()
 
 ## Rebuild database settings if any are missing
-if len(dbsettings)<15:
+if len(dbsettings)<16:
     svals = "('udp_ip','127.0.0.1'),"
     svals+= "('udp_port','2242'),"
     svals+= "('tcp_ip','127.0.0.1'),"
@@ -1105,7 +1117,7 @@ class App(tk.Tk):
 
         self.top = Toplevel(self)
         self.top.title("Search Term Activity")
-        self.top.geometry('440x700')
+        self.top.geometry('440x730')
         self.top.resizable(width=False, height=False)
 
         kwvals = self.keywords.item(kwiid)
@@ -1203,6 +1215,10 @@ class App(tk.Tk):
         self.top.spot.configure(yscroll=self.top.acscrollbar.set)
         self.top.acscrollbar.grid(row=6, column=1, sticky='NS', padx=(0,10), pady=(0,10))
 
+        # Button(s)
+        self.top.expact_button = ttk.Button(self.top, text = 'Export', command = lambda: self.export_keyword_activity(search), width='6')
+        self.top.expact_button.grid(row=7, column = 0, padx=8)
+
         sql = "SELECT * FROM activity WHERE profile_id = ? AND type = ? AND (call LIKE ? OR value LIKE ?) ORDER BY spotdate DESC"
         c.execute(sql,[current_profile_id,"RX.SPOT",'%'+search[2]+'%','%'+search[2]+'%'])
         sactivity_records = c.fetchall()
@@ -1235,6 +1251,49 @@ class App(tk.Tk):
         self.top.wait_visibility()
         self.top.grab_set()
         self.top.bind('<Escape>', lambda x: self.top.destroy())
+
+    ## Export all activity from view activity pane
+    def export_keyword_activity(self, search):
+        self.top2 = Toplevel(self)
+        self.top2.title("Export Activity")
+        self.top2.geometry('400x500')
+        self.top2.minsize(400,500)
+
+        self.exportmark = ttk.Label(self.top2, text="Copy (ctrl+c) / Export Tab-delimited Activity")
+        self.exportmark.pack(side=TOP, anchor='nw', padx=10, pady=10)
+
+        # save and copy buttons
+        tlframe = ttk.Frame(self.top2)
+        tlframe.pack(side=BOTTOM, anchor='sw', padx=10, pady=(0,10))
+        self.copy_button = ttk.Button(tlframe, text = 'Copy All', command = self.export_copy_all)
+        self.copy_button.pack(side=LEFT, padx=(0,10))
+        self.saveas_button = ttk.Button(tlframe, text = 'Save As', command = self.export_saveas_popup)
+        self.saveas_button.pack(side=RIGHT)
+
+        # text export window
+        self.export_text = Text(self.top2, wrap=NONE)
+        export_scrollbar = ttk.Scrollbar(self.top2, orient=tk.VERTICAL, command=self.export_text.yview)
+        self.export_text.configure(yscroll=export_scrollbar.set)
+        export_scrollbar.pack(side=RIGHT, fill='y', padx=(0,10), pady=(0,10))
+        self.export_text.pack(side=LEFT, expand=True, fill='both', padx=(10,0), pady=(0,10))
+
+        # right-click action
+        self.rcmenu = Menu(self.top2, tearoff = 0)
+        self.rcmenu.add_command(label = 'Copy')
+        self.export_text.bind('<Button-3>', lambda ev: self.export_copy_popup(ev))
+
+        sql = "SELECT * FROM activity WHERE profile_id = ? AND (call LIKE ? OR value LIKE ?) ORDER BY spotdate DESC"
+        c.execute(sql,[current_profile_id,'%'+search[2]+'%','%'+search[2]+'%'])
+        export_kw_records = c.fetchall()
+
+        for record in export_kw_records:
+            insert_rec = record[2]+"\t"+record[3]+"\t"+record[4]+"\t"+record[5]+"\t"+record[6]+"\t"+record[7]+"\n"
+            self.export_text.insert(tk.END, insert_rec)
+
+        self.top2.focus()
+        self.top2.wait_visibility()
+        self.top2.grab_set()
+        self.top2.bind('<Escape>', lambda x: self.top2.destroy())
 
     ## Display a maidenhead grid map with SPOT locations
     def grid_map(self):
@@ -1330,12 +1389,21 @@ class App(tk.Tk):
         for entry in self.top.gridcall.get_children():
             self.top.gridcall.delete(entry)
 
+        if map_loc == 0:
+                self.top.mapimg = ImageTk.PhotoImage(Image.open('maps/Maidenhead_NA-map.png'))
+                self.top.txtimg = ImageTk.PhotoImage(Image.open('maps/Maidenhead_NA-labels.png'))
+
         if map_loc == 1:
                 self.top.mapimg = ImageTk.PhotoImage(Image.open('maps/Maidenhead_EU-map.png'))
                 self.top.txtimg = ImageTk.PhotoImage(Image.open('maps/Maidenhead_EU-labels.png'))
-        else:
-                self.top.mapimg = ImageTk.PhotoImage(Image.open('maps/Maidenhead_NA-map.png'))
-                self.top.txtimg = ImageTk.PhotoImage(Image.open('maps/Maidenhead_NA-labels.png'))
+
+        if map_loc == 2:
+                self.top.mapimg = ImageTk.PhotoImage(Image.open('maps/Maidenhead_AU-map.png'))
+                self.top.txtimg = ImageTk.PhotoImage(Image.open('maps/Maidenhead_AU-labels.png'))
+
+        if map_loc == 3:
+                self.top.mapimg = ImageTk.PhotoImage(Image.open('maps/Maidenhead_ID-map.png'))
+                self.top.txtimg = ImageTk.PhotoImage(Image.open('maps/Maidenhead_ID-labels.png'))
 
         # retrieve records and add to treeview
         c.execute("SELECT * FROM grid ORDER BY grid_timestamp DESC LIMIT 100")
@@ -1625,15 +1693,24 @@ class App(tk.Tk):
         self.expect.bind('<Delete>', self.delete_expect)
         self.expect.bind('<Button-2>', self.edit_expect)
         self.expect.bind('<Button-3>', self.edit_expect)
-        self.expect.grid(row=0, column=0, sticky='NSEW', padx=(10,0), pady=(10,10))
+        self.expect.grid(row=0, column=0, sticky='NSEW', padx=(10,0), pady=(10,5))
 
         self.gcscrollbar = ttk.Scrollbar(self.top, orient=tk.VERTICAL, command=self.expect.yview)
         self.expect.configure(yscroll=self.gcscrollbar.set)
-        self.gcscrollbar.grid(row=0, column=1, sticky='NS', padx=(0,10), pady=(10,10))
+        self.gcscrollbar.grid(row=0, column=1, sticky='NS', padx=(0,10), pady=(10,5))
+
+        # frame with import & export buttons
+        self.ieframe = ttk.Frame(self.top)
+        self.ieframe.grid(row=1, column=0, sticky='NSE')
+
+        self.importexp = ttk.Button(self.ieframe, text = 'Import', command = self.import_expect, width='5')
+        self.importexp.grid(row=0, column=1, sticky='NE', padx=(8,0),pady=(0,0))
+        self.exportexp = ttk.Button(self.ieframe, text = 'Export', command = self.export_expect, width='6')
+        self.exportexp.grid(row=0, column=2, sticky='NE', padx=(8,0),pady=(0,0))
 
         # frame with input & buttons
         self.exframe = ttk.Frame(self.top)
-        self.exframe.grid(row=1, column=0, sticky='NSEW')
+        self.exframe.grid(row=2, column=0, sticky='NSEW', padx=(0,0), pady=(0,10))
 
         self.lbl1 = ttk.Label(self.exframe, text='Text to Expect (6):')
         self.lbl1.grid(row=0, column = 0, sticky='NW', padx=(8,0), pady=(8,0))
@@ -1659,14 +1736,127 @@ class App(tk.Tk):
         self.save.grid(row=1, column=4, sticky='NW', padx=(8,0),pady=(8,0))
         self.cancel = ttk.Button(self.exframe, text = 'Cancel', command = self.cancelsave_expect, width='6')
         self.cancel.grid(row=1, column=5, sticky='NW', padx=(8,8),pady=(8,0))
-        self.cancel = ttk.Button(self.exframe, text = 'Send Now', command = self.tx_expect, width='12')
-        self.cancel.grid(row=1, column=6, sticky='NW', padx=(20,8),pady=(8,0))
+        self.sendnow = ttk.Button(self.exframe, text = 'Send Now', command = self.tx_expect, width='12')
+        self.sendnow.grid(row=1, column=6, sticky='NW', padx=(20,0),pady=(8,0))
 
         self.update_expect()
         self.top.focus()
         self.top.wait_visibility()
         self.top.grab_set()
         self.top.bind('<Escape>', lambda x: self.top.destroy())
+
+    def import_expect(self):
+        self.top2 = Toplevel(self)
+        self.top2.title("Import Expect Statements")
+        self.top2.geometry('400x500')
+        self.top2.minsize(400,500)
+
+        self.addmark = ttk.Label(self.top2, text="Type or paste (ctrl+v) Expect statements, one per line")
+        self.addmark.pack(side=TOP, anchor='nw', padx=10, pady=10)
+
+        # save button
+        tlframe = ttk.Frame(self.top2)
+        tlframe.pack(side=BOTTOM, anchor='sw', padx=10, pady=(0,10))
+        self.save_button = ttk.Button(tlframe, text = 'Import Expect', command = self.proc_importexpect)
+        self.save_button.pack(side=LEFT, padx=(0,10))
+
+        # text window
+        self.batch = Text(self.top2, wrap=NONE)
+        batch_scrollbar = ttk.Scrollbar(self.top2, orient=tk.VERTICAL, command=self.batch.yview)
+        self.batch.configure(yscroll=batch_scrollbar.set)
+        batch_scrollbar.pack(side=RIGHT, fill='y', padx=(0,10), pady=(0,10))
+        self.batch.pack(side=LEFT, expand=True, fill='both', padx=(10,0), pady=(0,10))
+
+        self.top2.focus()
+        self.top2.wait_visibility()
+        self.top2.grab_set()
+        self.top2.bind('<Escape>', lambda x: self.top2.destroy())
+
+    ## Process added form responses
+    def proc_importexpect(self):
+        # sqlite3 database is setup ON CONFLICT REPLACE for unique expect field, no warning/error thrown if they overwrite
+        # so we'll ask if they want to proceed
+        msgtxt="If any expect statements in your import match existing statements, your existing statements will be replaced by the import. Do you want to continue?"
+        answer = askyesno(title='Proceed with import?', message=msgtxt, parent=self.top2)
+        if answer:
+
+            batch_values = StringIO(self.batch.get('1.0','end'))
+
+            lerr=0
+            lsuc=0
+            for line in batch_values:
+
+                # format is EXPECT<tab>RESPONSE<tab>ALLOWED<tab>COUNT
+                match_forms = re.search("(.*)\t(.*)\t(.*)\t(.*)",line)
+                if match_forms:
+                    new_expect = re.sub(r'[^A-Z0-9!]','',match_forms[1].upper())
+                    new_reply = match_forms[2].upper()
+                    new_allowed = match_forms[3].upper()
+                    new_allowed = new_allowed.replace(" ", "")
+                    new_txmax = re.sub(r'[^0-9]','',match_forms[4])
+
+                    # validate input
+                    if new_expect == "" or new_reply == "" or new_allowed == "" or new_txmax == "":
+                        lerr+=1
+                        continue
+
+                    if new_txmax.isnumeric() == False:
+                        lerr+=1
+                        return
+
+                    if int(new_txmax) < 1 or int(new_txmax) > 99:
+                        lerr+=1
+                        return
+
+                    sql = "INSERT INTO expect(expect,reply,allowed,txmax,txlist,lm) VALUES (?,?,?,?,'', CURRENT_TIMESTAMP)"
+                    c.execute(sql, [new_expect[0:6],new_reply,new_allowed,new_txmax])
+                    conn.commit()
+                    lsuc+=1
+
+            messagebox.showinfo("Results","Finished with "+str(lsuc)+" statements imported, and "+str(lerr)+" error(s).", parent=self.top2)
+            self.top2.destroy()
+            self.update_expect()
+
+    def export_expect(self):
+        self.top2 = Toplevel(self)
+        self.top2.title("Export Expect Entries")
+        self.top2.geometry('400x500')
+        self.top2.minsize(400,500)
+
+        self.exportmark = ttk.Label(self.top2, text="Copy (ctrl+c) / Export Tab-delimited Expect")
+        self.exportmark.pack(side=TOP, anchor='nw', padx=10, pady=10)
+
+        # save and copy buttons
+        tlframe = ttk.Frame(self.top2)
+        tlframe.pack(side=BOTTOM, anchor='sw', padx=10, pady=(0,10))
+        self.copy_button = ttk.Button(tlframe, text = 'Copy All', command = self.export_copy_all)
+        self.copy_button.pack(side=LEFT, padx=(0,10))
+        self.saveas_button = ttk.Button(tlframe, text = 'Save As', command = self.export_saveas_popup)
+        self.saveas_button.pack(side=RIGHT)
+
+        # text export window
+        self.export_text = Text(self.top2, wrap=NONE)
+        export_scrollbar = ttk.Scrollbar(self.top2, orient=tk.VERTICAL, command=self.export_text.yview)
+        self.export_text.configure(yscroll=export_scrollbar.set)
+        export_scrollbar.pack(side=RIGHT, fill='y', padx=(0,10), pady=(0,10))
+        self.export_text.pack(side=LEFT, expand=True, fill='both', padx=(10,0), pady=(0,10))
+
+        # right-click action
+        self.rcmenu = Menu(self.top2, tearoff = 0)
+        self.rcmenu.add_command(label = 'Copy')
+        self.export_text.bind('<Button-3>', lambda ev: self.export_copy_popup(ev))
+
+        c.execute("SELECT * FROM expect ORDER BY lm DESC")
+        export_exp_records = c.fetchall()
+
+        for record in export_exp_records:
+            insert_rec = record[0]+"\t"+record[1]+"\t"+record[2]+"\t"+str(record[4])+"\n"
+            self.export_text.insert(tk.END, insert_rec)
+
+        self.top2.focus()
+        self.top2.wait_visibility()
+        self.top2.grab_set()
+        self.top2.bind('<Escape>', lambda x: self.top2.destroy())
 
     ## Update expect treeview
     def update_expect(self):
